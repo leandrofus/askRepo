@@ -348,7 +348,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const PROVIDERS = JSON.parse('{{ providers_json|safe }}');
-        let currentTargetId = '', currentMode = 'batch';
+        let currentTargetId = '', currentMode = 'batch', lastAutoSwitchedTask = '';
         const folderModal = new bootstrap.Modal(document.getElementById('folderModal'));
 
         window.onhashchange = () => switchMode(window.location.hash.replace('#', '') || 'batch', false);
@@ -661,13 +661,19 @@
             document.getElementById('countText').innerHTML = data.progress + " / " + data.total;
             document.getElementById('currentTask').innerHTML = data.current_task || "-";
             
-            // Auto-switch to chat when KB finishes
-            if (data.current_task === "KB Answer Ready" && currentMode !== 'chat') {
+            // Auto-switch to chat when KB finishes (ONLY ONCE)
+            if (data.current_task === "KB Answer Ready" && lastAutoSwitchedTask !== "KB Answer Ready") {
                 switchMode('chat', true);
+                lastAutoSwitchedTask = "KB Answer Ready";
                 // Update chat repo target to the KB dir if it was a KB query
                 if (data.current_config && data.current_config.kb_dir) {
                     document.getElementById('chatRepo').value = data.current_config.kb_dir;
                 }
+            }
+            
+            // Reset auto-switch flag when task changes to something else
+            if (data.current_task && data.current_task !== "KB Answer Ready") {
+                lastAutoSwitchedTask = '';
             }
 
             const logOut = document.getElementById('logOutput');
