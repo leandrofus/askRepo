@@ -470,17 +470,39 @@ def process_batch(config):
     execution_state["current_task"] = "Completed"
 
 def process_kb(config):
+    global execution_state
     execution_state["logs"] += f"{CLR_INFO}[KB] Analyzing Knowledge Base at: {config['kb_dir']}{CLR_RESET}\n"
+    
+    # Initialize chat session if not exists
+    if not execution_state.get("chat_file"):
+        session_id = int(time.time())
+        execution_state["chat_file"] = os.path.join(RESULTS_DIR, f"Chat_Session_{session_id}.md")
+        with open(execution_state["chat_file"], "w") as f:
+            f.write(f"# Knowledge Base Chat Session: {session_id}\n")
+            f.write(f"**Target KB:** {config['kb_dir']}\n")
+            f.write(f"**Provider:** {config['provider']}\n---\n\n")
+
     try:
         full_prompt = config["kb_template"].format(kb_dir=config["kb_dir"], question=config["kb_question"])
     except Exception as e:
         execution_state["logs"] += f"{CLR_ERROR}Template Error: {str(e)}{CLR_RESET}\n"
         return
 
-    result = execute_llm_command(full_prompt, config["kb_dir"], config["provider"], config["model"], execution_state, gui_mode=True)
+    # Execute via chat command to keep session/context
+    result = execute_chat_command(full_prompt, config["kb_dir"], config["provider"], config["model"], execution_state)
+    
     execution_state["progress"] = 1
     execution_state["current_task"] = "KB Answer Ready"
     
+    # Update chat history and session file
+    execution_state["chat_history"].append({"role": "user", "text": config["kb_question"]})
+    execution_state["chat_history"].append({"role": "assistant", "text": result})
+    
+    with open(execution_state["chat_file"], "a") as f:
+        f.write(f"### USER (KB)\n{config['kb_question']}\n\n")
+        f.write(f"### ASSISTANT\n{result}\n\n---\n\n")
+
+    # Also save to dedicated KB file for history
     with open(config["output"], "w") as f:
         header = f"""# 🧠 KNOWLEDGE BASE ANALYSIS
 > **Date:** {time.strftime('%Y-%m-%d %H:%M:%S')}
@@ -494,4 +516,5 @@ def process_kb(config):
 ## 🎯 Analysis Result
 """
         f.write(header + result)
-    execution_state["logs"] += f"\n{CLR_SUCCESS}KB Answer saved to {os.path.basename(config['output'])}{CLR_RESET}\n"
+    
+    execution_state["logs"] += f"\n{CLR_SUCCESS}KB Answer added to chat and saved to {os.path.basename(config['output'])}{CLR_RESET}\n"

@@ -192,6 +192,11 @@ Instructions: Use the provided context and history to answer accurately. If the 
             sys.stdout.write(line)
             sys.stdout.flush()
             
+            # Capturar SESSION_ID de Gemini si aparece en los logs
+            session_match = re.search(r'--resume\s+([a-zA-Z0-9_-]{10,})', line)
+            if session_match:
+                state_proxy["active_session"] = session_match.group(1)
+
             if clean_line:
                 # Solo el texto limpio va a la UI y al historial
                 state_proxy["logs"] += clean_line
@@ -199,6 +204,7 @@ Instructions: Use the provided context and history to answer accurately. If the 
 
     process.wait()
     
+    # Fallback to 'latest' if no session ID was captured for gemini
     if provider_key == "gemini" and not state_proxy.get("active_session"):
         state_proxy["active_session"] = "latest"
 

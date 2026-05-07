@@ -585,6 +585,15 @@
             document.getElementById('countText').innerHTML = data.progress + " / " + data.total;
             document.getElementById('currentTask').innerHTML = data.current_task || "-";
             
+            // Auto-switch to chat when KB finishes
+            if (data.current_task === "KB Answer Ready" && currentMode !== 'chat') {
+                switchMode('chat', true);
+                // Update chat repo target to the KB dir if it was a KB query
+                if (data.current_config && data.current_config.kb_dir) {
+                    document.getElementById('chatRepo').value = data.current_config.kb_dir;
+                }
+            }
+
             const logOut = document.getElementById('logOutput');
             const newHtml = ansiToHtml(data.logs);
             if (logOut.innerHTML !== newHtml) {
