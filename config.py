@@ -25,13 +25,13 @@ CLR_LOG = "\033[90m"
 PROVIDERS = {
     "gemini": {
         "name": "Gemini (CLI - Tool Use)",
-        "template": "gemini --prompt {prompt_quoted} --yolo",
+        "template": "gemini --skip-trust --prompt {prompt_quoted} --yolo",
         "default_model": "gemini-2.0-flash"
     },
     "ollama": {
         "name": "Ollama",
         "template": "ollama run {model} {prompt_quoted}",
-        "default_model": "deepseek-coder:6.7b"
+        "default_model": "mistral:latest"
     },
     "claude": {
         "name": "Claude (anthropic-cli)",
@@ -45,7 +45,7 @@ PROVIDERS = {
     },
     "codex": {
         "name": "Codex (CLI)",
-        "template": "codex --model {model} --prompt {prompt_quoted}",
+        "template": "codex --skip-trust --model {model} --prompt {prompt_quoted}",
         "default_model": "gpt-5.4"
     },
     "custom": {
@@ -55,13 +55,11 @@ PROVIDERS = {
     }
 }
 
-DEFAULT_SYSTEM_PROMPT = "Eres un arquitecto de software experto. Investiga el código con profundidad quirúrgica."
+DEFAULT_SYSTEM_PROMPT = "you are a system architect."
 DEFAULT_TASK_TEMPLATE = """Instructions: {system_prompt}
 
 Task: Investigate files in {repo_dir}. 
-Detail capability: {category} -> {point} -> {sub_point}. 
-Inspect .go and .proto files, explain logic, list files, and describe data structures. 
-Be technical and precise."""
+analize the repository and give me {category} -> {point} -> {sub_point} """
 
 DEFAULT_KB_TEMPLATE = """Instructions: Act as a knowledge assistant. You have access to the local folder: {kb_dir}
 Question: {question}

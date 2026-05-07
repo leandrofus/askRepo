@@ -3,6 +3,7 @@ import subprocess
 import threading
 import time
 import json
+import re
 import markdown
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
@@ -62,6 +63,116 @@ def get_result(filename):
     html_content = markdown.markdown(content, extensions=['fenced_code', 'codehilite', 'tables'])
     return jsonify({"raw": content, "html": html_content})
 
+@app.route('/results/summarize', methods=['POST'])
+def summarize_report():
+    if execution_state["is_running"]: return jsonify({"error": "Engine busy"}), 400
+    data = request.json
+    filename = secure_filename(data.get('filename'))
+    provider = data.get('provider')
+    model = data.get('model')
+    
+    path = os.path.join(RESULTS_DIR, filename)
+    if not os.path.exists(path):
+        return jsonify({"error": "Not found"}), 404
+        
+    with open(path, 'r') as f:
+        content = f.read()
+
+    # Si es muy largo, tomamos partes clave para no exceder límites
+    if len(content) > 50000:
+        content = content[:25000] + "\n... [TRUNCATED] ...\n" + content[-25000:]
+
+    summary_prompt = f"POR FAVOR, GENERA UN RESUMEN EJECUTIVO TÉCNICO DE ESTA INVESTIGACIÓN. Destaca los hallazgos principales, la arquitectura detectada y los puntos críticos.\n\nCONTENIDO DEL REPORTE:\n{content}"
+    
+    execution_state["is_running"] = True
+    execution_state["logs"] = f"{CLR_INFO}[SUMMARIZE] Analyzing report: {filename}...{CLR_RESET}\n"
+    
+    def report_summary_bg():
+        system_p = "Act as a technical lead. Summarize the provided technical report concisely but thoroughly."
+        response = execute_chat_command(summary_prompt, os.getcwd(), provider, model, execution_state, system_prompt=system_p)
+        
+        # Insert summary at the beginning of the file
+        with open(path, 'r') as f:
+            original = f.read()
+        
+        with open(path, 'w') as f:
+            f.write(f"# 📝 EXECUTIVE SUMMARY\n{response}\n\n---\n\n" + original)
+            
+        execution_state["is_running"] = False
+        execution_state["logs"] += f"{CLR_SUCCESS}[SUMMARIZE] Summary added to {filename}.{CLR_RESET}\n"
+        
+    threading.Thread(target=report_summary_bg).start()
+    return jsonify({"status": "processing"})
+
+@app.route('/results/save', methods=['POST'])
+def save_chat():
+    history = execution_state.get("chat_history", [])
+    filename = f"Chat_Session_{int(time.time())}.md"
+    path = os.path.join(RESULTS_DIR, filename)
+    
+    with open(path, 'w') as f:
+        # Guardar ID de sesión si existe (para Gemini)
+        if execution_state.get("active_session"):
+            f.write(f"<!-- SESSION_ID: {execution_state['active_session']} -->\n")
+        
+        # Guardar el último system prompt usado para poder recuperarlo
+        if execution_state.get("last_system_prompt"):
+            f.write(f"\n<div class='system-prompt-block'><strong>Last Used System Prompt</strong>\n{execution_state['last_system_prompt']}</div>\n\n")
+
+        for msg in history:
+            f.write(f"### {msg['role'].upper()}\n\n{msg['text'].strip()}\n\n")
+            
+    return jsonify({"status": "saved", "filename": filename})
+
+@app.route('/results/resume', methods=['POST'])
+def resume_report():
+    data = request.json
+    filename = secure_filename(data.get('filename'))
+    path = os.path.join(RESULTS_DIR, filename)
+    
+    if not os.path.exists(path):
+        return jsonify({"error": "Not found"}), 404
+        
+    with open(path, 'r') as f:
+        content = f.read()
+
+    new_history = []
+    # Intentar recuperar SESSION_ID de metadatos (comentario HTML)
+    session_match = re.search(r'<!-- SESSION_ID: (.*?) -->', content)
+    if session_match:
+        execution_state["active_session"] = session_match.group(1).strip()
+        execution_state["logs"] += f"{CLR_INFO}[RESUME] Recovered Gemini Session: {execution_state['active_session']}{CLR_RESET}\n"
+    else:
+        execution_state["active_session"] = None
+
+    # Intentar parsear si es un formato de chat guardado
+    if "### USER" in content or "### ASSISTANT" in content:
+        parts = re.split(r'### (USER|ASSISTANT)\n+', content)
+        for i in range(1, len(parts), 2):
+            role = parts[i].lower()
+            text = parts[i+1].strip()
+            if text:
+                new_history.append({"role": role, "text": text})
+    else:
+        # Si es un reporte normal, lo cargamos como contexto inicial del asistente
+        new_history.append({"role": "assistant", "text": f"He cargado el reporte '{filename}'. ¿Qué te gustaría profundizar sobre estos resultados?\n\n---\n\n" + content[:10000]})
+
+    execution_state["chat_history"] = new_history
+    
+    # Intentar recuperar el último SYSTEM PROMPT
+    # Buscamos la última ocurrencia del bloque de prompt del sistema
+    system_prompt = None
+    prompt_blocks = re.findall(r"<div class='system-prompt-block'><strong>.*?</strong>\n(.*?)</div>", content, re.DOTALL)
+    if prompt_blocks:
+        system_prompt = prompt_blocks[-1].strip()
+        execution_state["last_system_prompt"] = system_prompt
+
+    return jsonify({
+        "status": "resumed", 
+        "history_count": len(new_history),
+        "system_prompt": system_prompt
+    })
+
 @app.route('/chat', methods=['POST'])
 def chat():
     if execution_state["is_running"]: return jsonify({"error": "Engine busy"}), 400
@@ -100,8 +211,8 @@ def chat():
         
         # Persist to file
         with open(execution_state["chat_file"], "a") as f:
-            f.write(f"### 👤 User\n{prompt}\n\n")
-            f.write(f"### 🤖 Assistant\n{response}\n\n---\n\n")
+            f.write(f"### USER\n{prompt}\n\n")
+            f.write(f"### ASSISTANT\n{response}\n\n---\n\n")
         
         execution_state["chat_history"].append({"role": "user", "text": prompt})
         execution_state["chat_history"].append({"role": "assistant", "text": response})
@@ -164,13 +275,24 @@ def run_task():
     if mode == 'batch':
         if 'file' not in request.files: return jsonify({"error": "No file uploaded"}), 400
         file = request.files['file']
+        if not file.filename.endswith('.md'):
+            return jsonify({"error": "Taskfile must be a .md file"}), 400
+            
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
 
-        # Output path is forced into RESULTS_DIR for persistence
-        output_name = secure_filename(request.form.get('output', 'Detailed_Manual.md'))
-        if not output_name.endswith('.md'): output_name += '.md'
+        # Output path validation
+        out_val = request.form.get('output', '').strip()
+        if not out_val:
+            output_name = f"Audit_Report_{int(time.time())}.md"
+        else:
+            output_name = secure_filename(out_val)
+            if not output_name or output_name == ".md":
+                output_name = f"Audit_Report_{int(time.time())}.md"
+            elif not output_name.endswith('.md'):
+                output_name += '.md'
+        
         output_path = os.path.join(RESULTS_DIR, output_name)
 
         config = {
@@ -178,7 +300,7 @@ def run_task():
             "task_template": request.form.get('task_template'),
             "repo": request.form.get('repo'),
             "output": output_path,
-            "mode": request.form.get('mode'),
+            "mode": "markdown",  # Forzado a markdown por el usuario
             "git_url": request.form.get('git_url'),
             "git_branch": request.form.get('git_branch'),
             "git_pull": request.form.get('git_pull') == 'true',
@@ -187,7 +309,7 @@ def run_task():
             "input_path": file_path
         }
         execution_state["current_config"] = config
-        execution_state["tasks_list"] = parse_capabilities(file_path, config["mode"])
+        execution_state["tasks_list"] = parse_capabilities(file_path, "markdown")
         execution_state["progress"] = 0
         execution_state["total"] = len(execution_state["tasks_list"])
     else:
@@ -195,10 +317,11 @@ def run_task():
         output_name = f"KB_{int(time.time())}.md"
         output_path = os.path.join(RESULTS_DIR, output_name)
         
+        from config import DEFAULT_KB_TEMPLATE
         config = {
             "kb_dir": request.form.get('kb_dir'),
             "kb_question": request.form.get('kb_question'),
-            "kb_template": request.form.get('kb_template'),
+            "kb_template": request.form.get('kb_template') or DEFAULT_KB_TEMPLATE,
             "provider": request.form.get('provider'),
             "model": request.form.get('model'),
             "output": output_path
@@ -211,6 +334,21 @@ def run_task():
     execution_state["stop_requested"] = False
     threading.Thread(target=process_thread).start()
     return jsonify({"status": "started"})
+
+@app.route('/stop', methods=['POST'])
+def stop_task():
+    execution_state["stop_requested"] = True
+    execution_state["is_running"] = False
+    execution_state["logs"] += f"\n{CLR_WARNING}[STOP] Stop requested by user.{CLR_RESET}\n"
+    return jsonify({"status": "stop_requested"})
+
+@app.route('/resume', methods=['POST'])
+def resume_task():
+    if execution_state["is_running"]: return jsonify({"error": "Already running"}), 400
+    execution_state["stop_requested"] = False
+    threading.Thread(target=process_thread).start()
+    execution_state["logs"] += f"\n{CLR_INFO}[RESUME] Resuming investigation...{CLR_RESET}\n"
+    return jsonify({"status": "resumed"})
 
 @app.route('/status')
 def get_status(): return jsonify(execution_state)
@@ -306,7 +444,16 @@ def process_batch(config):
     mode = 'w' if execution_state["progress"] == 0 else 'a'
     
     with open(output_path, mode) as out:
-        if mode == 'w': out.write(f"# Ask Repo: Technical Manual\n**Target:** {target_repo}\n\n")
+        if mode == 'w':
+            header = f"""# 📑 TECHNICAL AUDIT REPORT
+> **Generated:** {time.strftime('%Y-%m-%d %H:%M:%S')}
+> **Model:** {config['model']} ({config['provider']})
+> **Target:** `{target_repo}`
+> **Status:** Full Investigation
+
+---
+"""
+            out.write(header)
         start_idx = execution_state["progress"]
         for i in range(start_idx, len(tasks)):
             if execution_state["stop_requested"]: return
@@ -335,5 +482,16 @@ def process_kb(config):
     execution_state["current_task"] = "KB Answer Ready"
     
     with open(config["output"], "w") as f:
-        f.write(f"# Knowledge Base Answer\n**Folder:** {config['kb_dir']}\n**Question:** {config['kb_question']}\n\n{result}")
+        header = f"""# 🧠 KNOWLEDGE BASE ANALYSIS
+> **Date:** {time.strftime('%Y-%m-%d %H:%M:%S')}
+> **Source:** `{config['kb_dir']}`
+> **Model:** {config['model']}
+
+## ❓ Question
+{config['kb_question']}
+
+---
+## 🎯 Analysis Result
+"""
+        f.write(header + result)
     execution_state["logs"] += f"\n{CLR_SUCCESS}KB Answer saved to {os.path.basename(config['output'])}{CLR_RESET}\n"

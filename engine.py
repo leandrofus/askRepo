@@ -1,10 +1,19 @@
+import os
 import subprocess
 import shlex
 import sys
-from config import CLR_LOG, CLR_RESET, PROVIDERS
+import re
+from config import CLR_LOG, CLR_RESET, PROVIDERS, CLR_INFO, CLR_ERROR, CLR_WARNING
 
 def sanitize_output(line):
-    # Lista de prefijos o frases que queremos ignorar (Boilerplate de la CLI y errores de carga)
+    # Eliminar secuencias de escape ANSI (colores, movimientos de cursor, spinners)
+    ansi_escape = re.compile(r'(?:\x1B[@-_][0-?]*[ -/]*[@-~])')
+    line = ansi_escape.sub('', line)
+    
+    # Eliminar caracteres de control individuales (como los de los spinners de Ollama)
+    line = ''.join(c for c in line if ord(c) >= 32 or c in '\n\r\t')
+
+    # Lista de prefijos o frases que queremos ignorar
     ignored_patterns = [
         "[ExtensionManager]",
         "Error loading agent",
@@ -12,12 +21,12 @@ def sanitize_output(line):
         "Missing mandatory YAML frontmatter",
         "Agent Markdown files MUST start",
         "triple-dashes",
-        "name: my-agent",       # Más genérico para atrapar variaciones
+        "name: my-agent",
         "---)",
-        "List directory done",  # Metadata de herramientas
+        "List directory done",
         "Files above",
-        "Error executing tool", # Errores de ejecución de herramientas internas
-        "Invalid regular expression", # Error específico de regex en herramientas
+        "Error executing tool",
+        "Invalid regular expression",
         "YOLO mode is enabled",
         "All tool calls will be automatically approved",
         "Gemini CLI - Defaults to interactive mode",
@@ -29,6 +38,11 @@ def sanitize_output(line):
     for pattern in ignored_patterns:
         if pattern in line:
             return None
+    
+    # Si la línea queda vacía tras la limpieza, la ignoramos
+    if not line.strip():
+        return None
+        
     return line
 
 def execute_llm_command(full_prompt, cwd, provider_key, model, state_proxy, gui_mode=False):
@@ -94,14 +108,64 @@ def execute_chat_command(prompt, cwd, provider_key, model, state_proxy, system_p
         command_str = f"gemini --prompt {prompt_quoted} {session_arg} --yolo"
     else:
         template = preset["template"]
+        selected_model = model or preset["default_model"]
+        
+        # Resiliencia para Ollama: si el modelo no existe, usar el primero disponible
+        if provider_key == "ollama":
+            available = fetch_available_models("ollama")
+            if available and selected_model not in available:
+                selected_model = available[0]
+                state_proxy["logs"] += f"{CLR_WARNING}[OLLAMA] Model '{model}' not found. Using fallback: '{selected_model}'{CLR_RESET}\n"
+
+        # Inyectar contexto de archivos para proveedores que no son Gemini
+        file_context = ""
+        try:
+            # Listamos archivos en el directorio actual (limitado a los 10 más relevantes/recientes)
+            files = [f for f in os.listdir(cwd) if os.path.isfile(os.path.join(cwd, f))]
+            # Priorizamos logs y archivos de texto
+            files.sort(key=lambda x: (not x.endswith('.log'), not x.endswith('.txt'), x))
+            
+            for f_name in files[:10]:
+                f_path = os.path.join(cwd, f_name)
+                # Solo leer archivos de texto razonables (< 100KB)
+                if os.path.getsize(f_path) < 100000:
+                    try:
+                        with open(f_path, 'r', encoding='utf-8', errors='ignore') as f_content:
+                            content = f_content.read(4000) # Leer los primeros 4000 caracteres
+                            file_context += f"\n--- FILE: {f_name} ---\n{content}\n"
+                    except: pass
+            
+            if file_context:
+                state_proxy["logs"] += f"{CLR_INFO}[CONTEXT] Injected context from {len(files[:10])} local files.{CLR_RESET}\n"
+        except Exception as e:
+            state_proxy["logs"] += f"{CLR_ERROR}[CONTEXT] Error reading files: {str(e)}{CLR_RESET}\n"
+
+        # Inyectar historial de chat para mantener el contexto (si existe)
+        history_context = ""
+        if state_proxy.get("chat_history"):
+            history_context = "\n".join([f"{'USER' if m['role'] == 'user' else 'ASSISTANT'}: {m['text']}" for m in state_proxy["chat_history"][-6:]]) # Últimos 6 mensajes
+            history_context = f"\n[CHAT_HISTORY]\n{history_context}\n"
+
         # For other providers, we might still want to prepend system prompt if not handled by template
         final_prompt = prompt
+        if file_context or history_context:
+            final_prompt = f"""{history_context}
+[KNOWLEDGE_BASE_CONTEXT]
+The following are snippets from local files in '{cwd}' that might be relevant to the user's request.
+{file_context}
+[END_CONTEXT]
+
+USER QUESTION:
+{prompt}
+
+Instructions: Use the provided context and history to answer accurately. If the information isn't in the context, say so."""
+        
         if system_prompt:
-            final_prompt = f"{system_prompt}\n\n{prompt}"
+            final_prompt = f"SYSTEM_INSTRUCTIONS: {system_prompt}\n\n{final_prompt}"
         
         prompt_quoted = shlex.quote(final_prompt)
         command_str = template.format(
-            model=model or preset["default_model"],
+            model=selected_model,
             prompt_quoted=prompt_quoted
         )
 

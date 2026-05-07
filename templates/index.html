@@ -2,375 +2,336 @@
 <html>
 
 <head>
-    <title>Ask Repo | Multi-Provider Batch</title>
+    <title>Ask Repo | Polyvalent Investigation Engine</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/tokyo-night-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    
     <style>
-        .chat-bubble {
-            padding: 12px 16px;
-            border-radius: 12px;
-            margin-bottom: 10px;
-            max-width: 85%;
+        :root {
+            --bg-deep: #020617;
+            --bg-card: #0f172a;
+            --accent: #818cf8;
+            --text-main: #f8fafc;
+            --text-dim: #94a3b8;
+            --border: #1e293b;
         }
 
-        .bubble-user {
-            background: var(--accent);
-            color: white;
-            align-self: flex-end;
-            margin-left: auto;
-            border-bottom-right-radius: 2px;
-        }
-
-        .bubble-assistant {
-            background: #1e293b;
-            color: #e2e8f0;
-            align-self: flex-start;
-            border-bottom-left-radius: 2px;
-            border: 1px solid var(--border);
-        }
-
-        #chatBox {
-            height: 600px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            background: #020617;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-        }
-
-        .chat-input-area {
-            background: #0f172a;
-            padding: 15px;
-            border-radius: 0 0 10px 10px;
-            border: 1px solid var(--border);
-            border-top: none;
-        }
-
-        /* Premium Markdown Styling */
-        .markdown-content {
-            color: #e2e8f0;
-            line-height: 1.6;
-        }
-
-        .markdown-content h1, 
-        .markdown-content h2, 
-        .markdown-content h3 {
-            color: var(--accent);
-            margin-top: 1.5rem;
-            margin-bottom: 1rem;
-            font-weight: 700;
-        }
-
-        .markdown-content h1 { font-size: 1.75rem; }
-        .markdown-content h2 { font-size: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
-        .markdown-content h3 { font-size: 1.25rem; }
-
-        .markdown-content p, 
-        .markdown-content li {
-            margin-bottom: 0.75rem;
-        }
-
-        .markdown-content strong {
-            color: #fff;
-            font-weight: 700;
-        }
-
-        .markdown-content a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        .markdown-content a:hover {
-            text-decoration: underline;
-        }
-
-        .markdown-content code {
-            background-color: rgba(129, 140, 248, 0.15);
-            color: #818cf8;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9em;
-            border: 1px solid rgba(129, 140, 248, 0.2);
-        }
-
-        .markdown-content pre {
-            background-color: #0f172a;
-            border: 1px solid var(--border);
-            padding: 1.25rem;
-            border-radius: 8px;
-            margin: 1rem 0;
-            overflow-x: auto;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .markdown-content pre code {
-            background-color: transparent;
-            border: none;
-            padding: 0;
-            color: #4ade80;
-            font-size: 0.85rem;
-        }
-
-        .markdown-content table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            margin: 1.5rem 0;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .markdown-content th, 
-        .markdown-content td {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-            border-right: 1px solid var(--border);
-        }
-
-        .markdown-content th {
-            background-color: rgba(129, 140, 248, 0.1);
-            color: var(--accent);
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 0.75rem;
-            letter-spacing: 0.05em;
-        }
-
-        .markdown-content tr:last-child td { border-bottom: none; }
-        .markdown-content td:last-child, .markdown-content th:last-child { border-right: none; }
-
-        .markdown-content blockquote {
-            border-left: 4px solid var(--accent);
-            background-color: rgba(129, 140, 248, 0.05);
-            padding: 1rem 1.5rem;
-            margin: 1.5rem 0;
-            border-radius: 0 8px 8px 0;
-            color: #94a3b8;
-            font-style: italic;
-        }
+        body { background-color: var(--bg-deep); color: var(--text-main); font-family: 'Outfit', sans-serif; overflow-x: hidden; }
+        .card { background-color: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); }
+        h1, h2, h3, h4, h5, h6 { color: var(--text-main) !important; font-weight: 700; }
+        label { color: var(--text-main) !important; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
+        .form-control, .form-select { background-color: #020617; border: 1px solid var(--border); color: #ffffff !important; border-radius: 8px; padding: 0.75rem; }
+        .form-control:focus, .form-select:focus { background-color: #020617; border-color: var(--accent); box-shadow: 0 0 0 0.25rem rgba(129, 140, 248, 0.15); }
+        .text-accent { color: var(--accent) !important; }
+        .text-dim { color: var(--text-dim) !important; }
+        .text-light-main { color: #f1f5f9 !important; }
+        .btn-primary { background-color: var(--accent); border: none; font-weight: 600; padding: 0.8rem 1.5rem; }
+        .btn-primary:hover { background-color: #6366f1; transform: translateY(-1px); }
+        #logOutput { background-color: #020617; color: #4ade80; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; padding: 1rem; border-radius: 8px; height: 400px; overflow-y: auto; border: 1px solid var(--border); white-space: pre-wrap; }
+        .chat-bubble { padding: 14px 18px; border-radius: 16px; margin-bottom: 12px; max-width: 85%; position: relative; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .bubble-user { background: linear-gradient(135deg, var(--accent), #6366f1); color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px; }
+        .bubble-assistant { background: #1e293b; color: #e2e8f0; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid var(--border); }
+        #chatBox { height: 600px; overflow-y: auto; display: flex; flex-direction: column; padding: 20px; background: #020617; border-radius: 12px; border: 1px solid var(--border); gap: 4px; }
+        .chat-input-area { background: #0f172a; padding: 15px; border-radius: 0 0 12px 12px; border: 1px solid var(--border); border-top: none; }
+        .markdown-content { color: #e2e8f0; line-height: 1.8; font-size: 1rem; }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 { color: white; margin-top: 1.5rem; margin-bottom: 1rem; font-weight: 700; }
+        .markdown-content h1 { font-size: 1.75rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+        .markdown-content h2 { font-size: 1.4rem; }
+        .markdown-content h3 { font-size: 1.1rem; color: var(--accent); }
+        .markdown-content p { margin-bottom: 1.2rem; }
+        .markdown-content code { background-color: rgba(129, 140, 248, 0.15); color: #a5b4fc; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+        .markdown-content pre { background-color: #020617; border: 1px solid var(--border); padding: 1.25rem; border-radius: 10px; margin: 1.2rem 0; overflow-x: auto; }
+        .markdown-content pre code { background-color: transparent; color: inherit; padding: 0; font-size: 0.9rem; }
+        .markdown-content blockquote { border-left: 4px solid var(--accent); background: rgba(99, 102, 241, 0.05); padding: 1rem 1.5rem; margin: 1.5rem 0; color: #94a3b8; border-radius: 0 8px 8px 0; }
+        .markdown-content table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; background: #0f172a; border-radius: 8px; overflow: hidden; }
+        .markdown-content th, .markdown-content td { border: 1px solid var(--border); padding: 12px 15px; text-align: left; }
+        .markdown-content th { background-color: #1e293b; color: white; font-weight: 600; }
+        .markdown-content tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
+        .markdown-content ul, .markdown-content ol { padding-left: 1.5rem; margin-bottom: 1.5rem; }
+        .markdown-content li { margin-bottom: 0.5rem; }
+        .progress { background-color: #020617; border: 1px solid var(--border); height: 10px !important; border-radius: 20px; }
+        .progress-bar { background: linear-gradient(90deg, var(--accent), #4ade80); }
+        .accordion-item { background-color: transparent; border: 1px solid var(--border); border-radius: 8px !important; margin-bottom: 1rem; overflow: hidden; }
+        .accordion-button { background-color: #020617; color: white !important; font-weight: 600; }
+        .accordion-button:not(.collapsed) { background-color: #1e293b; color: var(--accent) !important; box-shadow: none; }
+        .accordion-button::after { filter: invert(1); }
+        .accordion-body { background-color: var(--bg-card); color: white; }
+        
+        /* Foldable Viewer */
+        .foldable-section { margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: #0f172a; }
+        .foldable-header { background: #1e293b; padding: 12px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; border-bottom: 1px solid transparent; }
+        .foldable-header:hover { background: #334155; }
+        .foldable-header.active { border-bottom-color: var(--border); background: #334155; }
+        .foldable-content { padding: 20px; display: none; background: #020617; }
+        
+        /* Premium Reports List */
+        #reportsList { max-height: 700px; overflow-y: auto; padding-right: 5px; }
+        #reportsList::-webkit-scrollbar { width: 6px; }
+        #reportsList::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        .report-item { background: #0f172a; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; padding: 15px; transition: 0.2s; cursor: pointer; }
+        .report-item:hover { border-color: var(--accent); background: #1e293b; transform: translateX(5px); }
+        .report-item .bi-file-earmark-text { font-size: 1.5rem; color: var(--accent); }
+        
+        /* PDF Export Overrides */
+        .pdf-export-mode { background: white !important; color: black !important; padding: 20mm !important; }
+        .pdf-export-mode * { color: black !important; background-color: transparent !important; }
+        .pdf-export-mode .foldable-section { border: 1px solid #ddd !important; margin-bottom: 20px !important; }
+        .pdf-export-mode .foldable-header { background: #f8f9fa !important; border-bottom: 1px solid #ddd !important; color: black !important; font-weight: bold !important; }
+        .pdf-export-mode pre { background: #f1f5f9 !important; border: 1px solid #e2e8f0 !important; color: #0f172a !important; padding: 15px !important; }
+        .pdf-export-mode table { border: 1px solid black !important; margin: 10px 0 !important; }
+        .pdf-export-mode th, .pdf-export-mode td { border: 1px solid #ccc !important; padding: 8px !important; }
+        .pdf-export-mode blockquote { border-left: 5px solid #ccc !important; padding-left: 15px !important; font-style: italic !important; }
+        .pdf-export-mode .bi { display: none !important; }
     </style>
 </head>
 
-<body class="p-5">
-    <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-5">
-            <div class="d-flex align-items-center">
-                <div class="bg-primary p-3 rounded-3 me-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
-                        stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path
-                            d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
-                    </svg>
-                </div>
-                <h1 class="h2 m-0 fw-bold">Ask <span class="text-accent">Repo</span> Controller</h1>
-            </div>
-            <div class="btn-group shadow" role="group">
-                <button type="button" class="btn mode-btn active" onclick="switchMode('batch')" id="modeBatch">BATCH
-                    REPO</button>
-                <button type="button" class="btn mode-btn" onclick="switchMode('kb')" id="modeKB">KNOWLEDGE
-                    BASE</button>
-                <button type="button" class="btn mode-btn" onclick="switchMode('chat')" id="modeChat">INTERACTIVE
-                    CHAT</button>
-                <button type="button" class="btn mode-btn" onclick="switchMode('marketplace')" id="modeMarketplace">MARKETPLACE</button>
-                <button type="button" class="btn mode-btn" onclick="switchMode('reports')"
-                    id="modeReports">REPORTS</button>
-            </div>
-        </div>
-
+<body>
+    <div class="container-fluid py-4">
         <div class="row g-4">
-            <div class="col-lg-5" id="leftColumn">
-                <div class="card p-4 h-100" id="configCard">
-                    <h5 class="mb-4 d-flex align-items-center"><span class="me-2">⚙️</span> Settings & Engine</h5>
-                    <form id="mainForm">
-                        <div class="row g-3 mb-4">
-                            <div class="col-md-6"><label class="form-label">LLM Provider</label><select name="provider"
-                                    id="provider" class="form-select" onchange="updateProviderHint()">{% for key, p in
-                                    providers.items() %}<option value="{{ key }}">{{ p.name }}</option>{% endfor
-                                    %}</select></div>
-                            <div class="col-md-6"><label class="form-label">Model</label><select name="model"
-                                    id="model" class="form-select"></select></div>
+            <!-- Left Column -->
+            <div class="col-lg-5">
+                <div class="card p-3 mb-3 border-secondary">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="m-0 fw-bold"><i class="bi bi-cpu me-2 text-accent"></i> AskRepo Engine</h6>
+                        <div class="btn-group btn-group-sm shadow-sm">
+                            <button id="modeBatch" class="btn btn-outline-primary active" onclick="switchMode('batch', true)">BATCH</button>
+                            <button id="modeKB" class="btn btn-outline-primary" onclick="switchMode('kb', true)">KB</button>
+                            <button id="modeChat" class="btn btn-outline-primary" onclick="switchMode('chat', true)">CHAT</button>
+                            <button id="modeReports" class="btn btn-outline-primary" onclick="switchMode('reports', true)">FILES</button>
                         </div>
+                    </div>
+                </div>
 
-                        <div id="batchInputs">
-                            <ul class="nav nav-tabs mb-3 border-secondary" role="tablist">
-                                <li class="nav-item"><button class="nav-link active text-white" id="system-tab"
-                                        data-bs-toggle="tab" data-bs-target="#system-pane" type="button">System
-                                        Prompt</button></li>
-                                <li class="nav-item"><button class="nav-link text-white" id="task-tab"
-                                        data-bs-toggle="tab" data-bs-target="#task-pane" type="button">Task
-                                        Template</button></li>
-                            </ul>
-                            <div class="tab-content mb-4">
-                                <div class="tab-pane fade show active" id="system-pane"><textarea name="prompt"
-                                        id="systemPrompt" class="form-control"
-                                        rows="4">{{ default_system_prompt }}</textarea></div>
-                                <div class="tab-pane fade" id="task-pane"><textarea name="task_template"
-                                        id="taskTemplate" class="form-control"
-                                        rows="8">{{ default_task_template }}</textarea></div>
-                            </div>
-                            <div class="mb-4 border-top border-secondary pt-3">
-                                <h6 class="text-accent mb-3 small">REPOSITORIO</h6>
-                                <div class="row g-3">
-                                    <div class="col-12"><label class="form-label small">Git URL</label><input
-                                            type="text" id="gitUrl" class="form-control"></div>
-                                    <div class="col-12"><label class="form-label small">Local Path</label>
-                                        <div class="input-group shadow-sm"><input type="text" id="repoDir"
-                                                class="form-control" value="./"><button
-                                                class="btn btn-outline-secondary px-3" type="button"
-                                                onclick="openFolderBrowser('repoDir')">📁 BROWSE</button></div>
+                <div class="card p-4" id="configCard">
+                    <h5 class="mb-4 text-light-main">⚙️ Investigation Setup</h5>
+                    
+                    <div class="accordion" id="setupAccordion">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLLM">
+                                    <i class="bi bi-robot me-2"></i> LLM Configuration
+                                </button>
+                            </h2>
+                            <div id="collapseLLM" class="accordion-collapse collapse show">
+                                <div class="accordion-body">
+                                    <div class="row g-3">
+                                        <div class="col-6">
+                                            <label class="form-label">Provider</label>
+                                            <select id="provider" class="form-select" onchange="updateProviderHint()">
+                                                {% for p_id, p_info in providers.items() %}
+                                                <option value="{{ p_id }}">{{ p_info.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label">Model</label>
+                                            <select id="model" class="form-select"></select>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="row g-3">
-                                <div class="col-12"><label class="form-label small">Taskfile</label><input type="file"
-                                        id="fileInput" class="form-control"></div>
-                                <div class="col-md-6"><label class="form-label small">Parsing</label><select
-                                        id="parseMode" class="form-select">
-                                        <option value="default">Default</option>
-                                        <option value="csv">CSV</option>
-                                        <option value="pipe">Pipe</option>
-                                    </select></div>
-                                <div class="col-md-6"><label class="form-label small">Output</label><input type="text"
-                                        id="outputFile" class="form-control" value="Manual.md"></div>
-                            </div>
                         </div>
 
-                        <div id="kbInputs" class="d-none">
-                            <div class="mb-4"><label class="form-label">KB Folder</label>
-                                <div class="input-group shadow-sm"><input type="text" id="kbDir"
-                                        class="form-control"><button class="btn btn-outline-secondary px-3"
-                                        type="button" onclick="openFolderBrowser('kbDir')">📁 BROWSE</button></div>
-                            </div>
-                            <div class="mb-4"><label class="form-label">Question</label><textarea id="kbQuestion"
-                                    class="form-control" rows="6"></textarea></div>
-                        </div>
-
-                        <div id="chatSettings" class="d-none">
-                            <div class="mb-4">
-                                <label class="form-label">Chat System Prompt</label>
-                                <textarea id="chatSystemPrompt" class="form-control mb-3" rows="3" placeholder="Define the AI persona for this chat..."></textarea>
-                                
-                                <label class="form-label">Session Target Repo</label>
-                                <div class="input-group shadow-sm"><input type="text" id="chatRepo" class="form-control"
-                                        value="./"><button class="btn btn-outline-secondary px-3" type="button"
-                                        onclick="openFolderBrowser('chatRepo')">📁 BROWSE</button></div>
-                                <div class="mt-1 small text-dim">Context is maintained while the server is running.
+                        <div class="accordion-item border-accent">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInstructions">
+                                    <i class="bi bi-journal-text me-2"></i> Core Instructions & Tasks
+                                </button>
+                            </h2>
+                            <div id="collapseInstructions" class="accordion-collapse collapse show">
+                                <div class="accordion-body">
+                                    <div id="batchCore">
+                                        <div class="mb-3">
+                                            <label class="form-label">System Instruction Override</label>
+                                            <textarea id="systemPrompt" class="form-control" rows="8">{{ default_system_prompt }}</textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Task Template</label>
+                                            <textarea id="taskTemplate" class="form-control" rows="8">{{ default_task_template }}</textarea>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-12">
+                                                <label class="form-label">Output Filename</label>
+                                                <input type="text" id="outputFile" class="form-control" value="{{ default_output }}">
+                                            </div>
+                                        </div>
+                                        <div class="card p-3 bg-dark border-secondary">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <label class="m-0 text-accent">📝 Target Taskfile (.md)</label>
+                                                <button type="button" class="btn btn-link btn-sm text-dim p-0" data-bs-toggle="modal" data-bs-target="#taskfileHelpModal"><i class="bi bi-question-circle"></i> GUIDE</button>
+                                            </div>
+                                            <input type="file" id="fileInput" class="form-control form-control-sm" accept=".md">
+                                        </div>
+                                    </div>
+                                    <div id="kbPrompts" class="d-none">
+                                        <div class="mb-3">
+                                            <label class="form-label">KB System Prompt</label>
+                                            <textarea id="kbSystemPrompt" class="form-control" rows="8">{{ default_system_prompt }}</textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Natural Language Question</label>
+                                            <textarea id="kbQuestion" class="form-control" rows="6" placeholder="What do you want to find?"></textarea>
+                                        </div>
+                                    </div>
+                                    <div id="chatPrompts" class="d-none">
+                                        <div class="mb-3">
+                                            <label class="form-label">Chat Persona</label>
+                                            <textarea id="chatSystemPrompt" class="form-control" rows="8">Act as a senior software architect. Provide deep technical analysis.</textarea>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-outline-info w-50" onclick="summarizeChat()">SUMMARIZE SESSION</button>
-                                <button type="button" class="btn btn-outline-danger w-50" onclick="clearChat()">CLEAR CONTEXT</button>
-                            </div>
                         </div>
 
-                        <div class="row g-2 mt-3" id="mainActionBtns">
-                            <div class="col-12" id="startBtnContainer"><button type="button" id="startBtn"
-                                    class="btn btn-primary w-100 shadow">RUN INVESTIGATION</button></div>
-                            <div class="col-6 d-none" id="stopBtnContainer"><button type="button" id="stopBtn"
-                                    class="btn btn-danger w-100 shadow">STOP</button></div>
-                            <div class="col-6 d-none" id="resumeBtnContainer"><button type="button" id="resumeBtn"
-                                    class="btn btn-warning w-100 shadow">RESUME</button></div>
-                        </div>
-                    </form>
-                </div>
-                <div class="card p-4 h-100 d-none" id="marketplaceSettingsCard">
-                    <h5 class="mb-4 d-flex align-items-center"><span class="me-2">🏪</span> Ollama Marketplace</h5>
-                    <div class="mb-4">
-                        <label class="form-label">Search Models</label>
-                        <div class="input-group shadow-sm">
-                            <input type="text" id="marketplaceSearch" class="form-control" placeholder="e.g. deepseek, llama3, phi...">
-                            <button class="btn btn-primary px-3" type="button" onclick="searchMarketplace()">🔍 SEARCH</button>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseRepo">
+                                    <i class="bi bi-folder-symlink me-2"></i> Repository Context
+                                </button>
+                            </h2>
+                            <div id="collapseRepo" class="accordion-collapse collapse">
+                                <div class="accordion-body">
+                                    <div id="batchRepo">
+                                        <div class="mb-3">
+                                            <label class="form-label">Local Repository</label>
+                                            <div class="input-group">
+                                                <input type="text" id="repoDir" class="form-control" value="{{ default_repo }}">
+                                                <button type="button" class="btn btn-outline-secondary" onclick="openFolderBrowser('repoDir')"><i class="bi bi-folder2-open"></i></button>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-8">
+                                                <label class="form-label">Git URL (Optional)</label>
+                                                <input type="text" id="gitUrl" class="form-control" placeholder="https://...">
+                                            </div>
+                                            <div class="col-4">
+                                                <label class="form-label">Branch</label>
+                                                <input type="text" id="gitBranch" class="form-control" value="master">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="kbContext" class="d-none">
+                                        <div class="mb-3">
+                                            <label class="form-label">Knowledge Base Path</label>
+                                            <div class="input-group">
+                                                <input type="text" id="kbDir" class="form-control" value="{{ default_repo }}/docs">
+                                                <button type="button" class="btn btn-outline-secondary" onclick="openFolderBrowser('kbDir')"><i class="bi bi-folder2-open"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="chatContext" class="d-none">
+                                        <div class="mb-3">
+                                            <label class="form-label">Chat Target Repo</label>
+                                            <div class="input-group">
+                                                <input type="text" id="chatRepo" class="form-control" value="{{ default_repo }}">
+                                                <button type="button" class="btn btn-outline-secondary" onclick="openFolderBrowser('chatRepo')"><i class="bi bi-folder2-open"></i></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div id="marketplaceInfo" class="small text-dim mt-2">
-                        Browse the official Ollama library and pull models directly to your local instance.
+
+                    <div class="row g-2 mt-4" id="mainActionBtns">
+                        <div class="col-12" id="startBtnContainer"><button type="button" id="startBtn" class="btn btn-primary w-100 shadow fs-5">🚀 RUN INVESTIGATION</button></div>
+                        <div class="col-6 d-none" id="stopBtnContainer"><button type="button" id="stopBtn" onclick="stopEngine()" class="btn btn-danger w-100 shadow">STOP</button></div>
+                        <div class="col-6 d-none" id="resumeBtnContainer"><button type="button" id="resumeBtn" onclick="resumeEngine()" class="btn btn-warning w-100 shadow">RESUME</button></div>
                     </div>
+                    <button type="button" class="btn btn-link btn-sm text-dim w-100 mt-2" onclick="restoreDefaults()">RESTORE DEFAULTS</button>
                 </div>
+                
                 <div class="card p-4 h-100 d-none" id="reportsCard">
-                    <h5 class="mb-4">📁 Past Investigations</h5>
-                    <div id="reportsList" class="list-group list-group-flush"></div>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="m-0 text-light-main"><i class="bi bi-clock-history me-2 text-accent"></i>Past Investigations</h5>
+                        <button class="btn btn-sm btn-outline-primary" onclick="loadReportsList()"><i class="bi bi-arrow-clockwise"></i></button>
+                    </div>
+                    <div id="reportsList"></div>
                 </div>
             </div>
 
-            <div class="col-lg-7" id="rightColumn">
+            <!-- Right Column -->
+            <div class="col-lg-7">
                 <div class="card p-4 h-100" id="monitorCard">
                     <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h5 class="m-0 text-accent">Monitoring Station</h5><span id="statusBadge"
-                            class="badge bg-secondary">IDLE</span>
+                        <h5 class="m-0 text-accent"><i class="bi bi-cpu-fill me-2"></i>Monitoring Station</h5>
+                        <span id="statusBadge" class="badge bg-secondary px-3 py-2">IDLE</span>
                     </div>
-                    <div id="progressSection" class="mb-4">
-                        <div class="d-flex justify-content-between mb-2"><span>Overall: <span
-                                    id="countText">0/0</span></span><span id="progressText">0%</span></div>
-                        <div class="progress">
-                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
-                                style="width: 0%;"></div>
+                    
+                    <!-- New Status Card -->
+                    <div class="bg-deep p-4 rounded-4 border border-secondary mb-4 shadow-sm">
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <div class="bg-accent bg-opacity-10 p-3 rounded-3 text-accent border border-accent border-opacity-25">
+                                <i class="bi bi-file-earmark-code-fill fs-3"></i>
+                            </div>
+                            <div class="flex-grow-1 overflow-hidden">
+                                <div class="small text-dim text-uppercase fw-bold mb-1" style="letter-spacing: 1px;">Target File</div>
+                                <div id="currentTask" class="h5 m-0 text-truncate text-white fw-bold">Waiting for investigation...</div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-section">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="small text-dim">Operation Progress</span>
+                                <span id="progressText" class="badge bg-accent bg-opacity-10 text-accent fw-bold border border-accent border-opacity-25">0%</span>
+                            </div>
+                            <div class="progress mb-2" style="height: 10px;">
+                                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-accent" style="width: 0%;"></div>
+                            </div>
+                            <div class="text-center small text-dim" id="countText">0 / 0 tasks analyzed</div>
                         </div>
                     </div>
-                    <div id="taskSection" class="mb-3"><label class="small text-dim">CURRENT TASK</label><span
-                            id="currentTask" class="fw-semibold text-info d-block">-</span></div>
-                    <pre id="logOutput" class="flex-grow-1 shadow-inner"></pre>
-                </div>
 
-                <div class="card p-4 h-100 d-none" id="marketplaceCard">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h5 class="m-0 text-accent">Marketplace Results</h5>
-                        <span id="marketplaceStatus" class="badge bg-secondary">OLLAMA.COM</span>
-                    </div>
-                    <div id="marketplaceResults" style="height: 600px; overflow-y: auto;" class="pe-2">
-                        <div class="text-center text-dim mt-5">
-                            <p>Enter a query to search models in the marketplace.</p>
+                    <!-- Logs section -->
+                    <div class="flex-grow-1 d-flex flex-column overflow-hidden">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="small text-dim text-uppercase fw-bold"><i class="bi bi-terminal me-2"></i>Engine Output</span>
                         </div>
+                        <pre id="logOutput" class="flex-grow-1 shadow-inner ansi-terminal mb-0"></pre>
                     </div>
                 </div>
 
                 <div class="card p-4 h-100 d-none" id="chatCard">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="m-0 text-accent">Interactive Investigation</h5><span id="chatStatus"
-                            class="badge bg-info">SESSION ACTIVE</span>
+                        <h5 class="m-0 text-accent">Interactive Investigation</h5>
+                        <span id="chatStatus" class="badge bg-info px-3 py-2">SESSION ACTIVE</span>
                     </div>
                     <div id="chatBox"></div>
                     <div class="chat-input-area d-flex gap-2">
-                        <textarea id="chatInput" class="form-control" rows="1"
-                            placeholder="Ask anything about the repo..."></textarea>
-                        <button class="btn btn-primary px-4" id="chatSendBtn">SEND</button>
+                        <textarea id="chatInput" class="form-control" rows="1" placeholder="Ask anything... (Ctrl+Enter)"></textarea>
+                        <button class="btn btn-primary px-4" id="chatSendBtn"><i class="bi bi-send-fill"></i></button>
                     </div>
                 </div>
 
                 <div class="card p-4 h-100 d-none" id="viewerCard">
-                    <div class="d-flex justify-content-between mb-4">
-                        <h5 id="viewerTitle">Viewer</h5><button class="btn btn-sm btn-outline-secondary"
-                            onclick="closeViewer()">CLOSE</button>
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+                        <h5 id="viewerTitle" class="m-0 text-truncate">Viewer</h5>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-success" onclick="resumeCurrentReport()" title="Resume Session"><i class="bi bi-chat-dots-fill"></i></button>
+                            <button class="btn btn-outline-info" onclick="summarizeCurrentReport()" title="Summarize"><i class="bi bi-briefcase-fill"></i></button>
+                            <button class="btn btn-outline-danger" onclick="exportToPDF()" title="Export PDF"><i class="bi bi-file-earmark-pdf-fill"></i></button>
+                            <button class="btn btn-outline-secondary" onclick="closeViewer()"><i class="bi bi-x-lg"></i></button>
+                        </div>
                     </div>
-                    <div id="reportContent" class="p-4 bg-dark rounded border border-secondary shadow-inner markdown-content"
-                        style="height: 700px; overflow-y: auto;"></div>
+                    <div id="reportContent" class="markdown-content" style="height: 750px; overflow-y: auto; padding-right: 15px;"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="folderModal" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header border-secondary">
-                    <h5>📁 Select Folder</h5><button type="button" class="btn-close btn-close-white"
-                        data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-0">
-                    <div id="explorerContent" class="p-3"></div>
-                </div>
-                <div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary"
-                        data-bs-dismiss="modal">CANCEL</button></div>
-            </div>
-        </div>
-    </div>
+    <!-- Modals -->
+    <div class="modal fade" id="folderModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content border-secondary bg-dark text-white"><div class="modal-header border-secondary"><h5 class="modal-title">Select Directory</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-0 bg-deep"><div id="explorerContent" class="p-3"></div></div></div></div></div>
+    <div class="modal fade" id="taskfileHelpModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-centered"><div class="modal-content border-secondary bg-dark text-white"><div class="modal-header border-secondary"><h5 class="modal-title"><i class="bi bi-info-circle me-2"></i>Taskfile Structure</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body p-4 bg-deep">
+        <pre class="bg-dark p-3 rounded border border-secondary text-info">The [Category] capabilities identified:\n* [Main Point]\n  * [Sub-point to Analyze]</pre>
+    </div></div></div></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -378,172 +339,263 @@
         let currentTargetId = '', currentMode = 'batch';
         const folderModal = new bootstrap.Modal(document.getElementById('folderModal'));
 
-        function switchMode(mode) {
-            currentMode = mode;
-            ['modeBatch', 'modeKB', 'modeChat', 'modeMarketplace', 'modeReports'].forEach(id => document.getElementById(id).classList.toggle('active', id === 'mode' + mode.charAt(0).toUpperCase() + mode.slice(1)));
+        window.onhashchange = () => switchMode(window.location.hash.replace('#', '') || 'batch', false);
+
+        function saveState() {
+            const state = {
+                provider: document.getElementById('provider').value, model: document.getElementById('model').value,
+                repoDir: document.getElementById('repoDir').value, kbDir: document.getElementById('kbDir').value, chatRepo: document.getElementById('chatRepo').value,
+                gitUrl: document.getElementById('gitUrl').value, gitBranch: document.getElementById('gitBranch').value,
+                systemPrompt: document.getElementById('systemPrompt').value, taskTemplate: document.getElementById('taskTemplate').value,
+                kbSystemPrompt: document.getElementById('kbSystemPrompt').value, chatSystemPrompt: document.getElementById('chatSystemPrompt').value,
+                outputFile: document.getElementById('outputFile').value
+            };
+            localStorage.setItem('askrepo_premium_v3', JSON.stringify(state));
+        }
+
+        function loadState() {
+            const saved = localStorage.getItem('askrepo_premium_v3');
+            if (saved) {
+                const s = JSON.parse(saved);
+                Object.keys(s).forEach(k => { const el = document.getElementById(k); if (el && s[k]) el.value = s[k]; });
+                updateProviderHint();
+            }
+        }
+
+        function restoreDefaults() { if (confirm('Restore to factory settings?')) { localStorage.removeItem('askrepo_premium_v3'); location.reload(); } }
+
+        function switchMode(mode, updateHash) {
+            currentMode = mode; if (updateHash) window.location.hash = mode;
+            ['modeBatch', 'modeKB', 'modeChat', 'modeReports'].forEach(id => document.getElementById(id).classList.toggle('active', id === 'mode' + mode.charAt(0).toUpperCase() + mode.slice(1)));
+            
             document.getElementById('configCard').classList.toggle('d-none', mode === 'reports');
             document.getElementById('reportsCard').classList.toggle('d-none', mode !== 'reports');
-            document.getElementById('monitorCard').classList.toggle('d-none', mode === 'reports' || mode === 'chat' || mode === 'marketplace');
+            document.getElementById('monitorCard').classList.toggle('d-none', mode === 'chat' || (mode === 'reports' && document.getElementById('reportContent').innerHTML));
             document.getElementById('chatCard').classList.toggle('d-none', mode !== 'chat');
-            document.getElementById('marketplaceCard').classList.toggle('d-none', mode !== 'marketplace');
-            document.getElementById('viewerCard').classList.toggle('d-none', mode !== 'reports');
+            document.getElementById('viewerCard').classList.toggle('d-none', mode !== 'reports' || !document.getElementById('reportContent').innerHTML);
 
-            document.getElementById('batchInputs').classList.toggle('d-none', mode !== 'batch');
-            document.getElementById('kbInputs').classList.toggle('d-none', mode !== 'kb');
-            document.getElementById('chatSettings').classList.toggle('d-none', mode !== 'chat');
-            document.getElementById('marketplaceSettingsCard').classList.toggle('d-none', mode !== 'marketplace');
-            document.getElementById('mainActionBtns').classList.toggle('d-none', mode === 'chat' || mode === 'reports' || mode === 'marketplace');
+            document.getElementById('batchCore').classList.toggle('d-none', mode !== 'batch');
+            document.getElementById('kbPrompts').classList.toggle('d-none', mode !== 'kb');
+            document.getElementById('chatPrompts').classList.toggle('d-none', mode !== 'chat');
+            document.getElementById('batchRepo').classList.toggle('d-none', mode !== 'batch');
+            document.getElementById('kbContext').classList.toggle('d-none', mode !== 'kb');
+            document.getElementById('chatContext').classList.toggle('d-none', mode !== 'chat');
+            document.getElementById('mainActionBtns').classList.toggle('d-none', mode === 'chat' || mode === 'reports');
 
             if (mode === 'reports') loadReportsList();
-            if (mode === 'batch') document.getElementById('startBtn').innerText = 'RUN INVESTIGATION';
-            if (mode === 'kb') document.getElementById('startBtn').innerText = 'ASK KNOWLEDGE BASE';
+            saveState();
         }
 
         async function loadReportsList() {
             const res = await fetch('/results'), files = await res.json();
             const list = document.getElementById('reportsList'); list.innerHTML = '';
             files.forEach(f => {
-                const btn = document.createElement('button'); btn.className = 'list-group-item list-group-item-action bg-transparent text-white border-secondary small py-3 d-flex justify-content-between';
-                btn.innerHTML = `<span>📄 ${f}</span><span class="text-accent">VIEW</span>`;
-                btn.onclick = async () => {
+                // Try to extract date from filename (Chat_Session_XXXXXXXXXX)
+                let dateStr = 'Audit Session';
+                const tsMatch = f.match(/(\d{10})/);
+                if (tsMatch) {
+                    const date = new Date(parseInt(tsMatch[1]) * 1000);
+                    dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                }
+
+                const div = document.createElement('div'); 
+                div.className = 'report-item d-flex align-items-center gap-3 mb-3 p-3 rounded-3 border border-secondary';
+                div.style.background = 'rgba(15, 23, 42, 0.6)';
+                div.style.cursor = 'pointer';
+                div.style.transition = 'all 0.2s ease';
+                
+                div.innerHTML = `
+                    <div class="bg-accent bg-opacity-10 p-2 rounded-2 text-accent">
+                        <i class="bi bi-file-earmark-medical fs-4"></i>
+                    </div>
+                    <div class="flex-grow-1 overflow-hidden">
+                        <div class="fw-bold text-white text-truncate" title="${f}">${f.replace('.md', '')}</div>
+                        <div class="small text-dim d-flex align-items-center gap-2">
+                            <i class="bi bi-calendar3 small"></i> ${dateStr}
+                        </div>
+                    </div>
+                    <span class="badge rounded-pill bg-dark border border-secondary text-dim small">REPORT</span>
+                `;
+                
+                div.onmouseover = () => { div.style.borderColor = 'var(--accent)'; div.style.background = 'rgba(30, 41, 59, 0.8)'; div.style.transform = 'translateX(5px)'; };
+                div.onmouseout = () => { div.style.borderColor = 'var(--border)'; div.style.background = 'rgba(15, 23, 42, 0.6)'; div.style.transform = 'translateX(0)'; };
+                
+                div.onclick = async () => {
                     const r = await fetch(`/results/${f}`), d = await r.json();
                     document.getElementById('viewerTitle').innerText = f;
-                    document.getElementById('reportContent').innerHTML = d.html;
+                    renderFoldableMarkdown(d.raw);
+                    switchMode('reports', false);
                 };
-                list.appendChild(btn);
+                list.appendChild(div);
             });
         }
 
-        function closeViewer() { document.getElementById('reportContent').innerHTML = ''; }
-        async function updateProviderHint() {
-            const k = document.getElementById('provider').value;
-            const modelSelect = document.getElementById('model');
+        function renderFoldableMarkdown(raw) {
+            const viewer = document.getElementById('reportContent'); viewer.innerHTML = '';
+            const fileName = document.getElementById('viewerTitle').innerText;
             
-            // Clear current options
-            modelSelect.innerHTML = '<option value="">Loading...</option>';
-            
-            try {
-                const res = await fetch(`/api/models/${k}`);
-                const models = await res.json();
-                
-                modelSelect.innerHTML = '';
-                if (models.length === 0) {
-                    modelSelect.innerHTML = '<option value="">No models found</option>';
-                } else {
-                    models.forEach(m => {
-                        const opt = document.createElement('option');
-                        opt.value = m;
-                        opt.innerText = m;
-                        if (m === PROVIDERS[k].default_model) opt.selected = true;
-                        modelSelect.appendChild(opt);
-                    });
-                }
-            } catch (e) {
-                console.error("Error fetching models:", e);
-                modelSelect.innerHTML = '<option value="">Error loading models</option>';
+            // Add Fancy Document Header
+            let dateStr = 'Recent Audit';
+            const tsMatch = fileName.match(/(\d{10})/);
+            if (tsMatch) {
+                const date = new Date(parseInt(tsMatch[1]) * 1000);
+                dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
             }
+
+            const headerDoc = document.createElement('div');
+            headerDoc.className = 'bg-deep p-4 rounded-4 border border-secondary mb-5 d-flex justify-content-between align-items-center shadow-sm';
+            headerDoc.innerHTML = `
+                <div>
+                    <div class="text-accent small text-uppercase fw-bold mb-1" style="letter-spacing: 2px;">Audit Report</div>
+                    <h2 class="m-0 text-white">${fileName.replace('.md', '')}</h2>
+                    <div class="text-dim small mt-2"><i class="bi bi-calendar3 me-2"></i>Generated on ${dateStr}</div>
+                </div>
+                <div class="text-center p-3 border border-accent border-opacity-25 rounded-circle bg-accent bg-opacity-5">
+                    <i class="bi bi-shield-check text-accent fs-1"></i>
+                    <div class="text-accent small fw-bold" style="font-size: 10px;">SECURE</div>
+                </div>
+            `;
+            viewer.appendChild(headerDoc);
+
+            const sections = raw.split(/^## /m);
+            if (sections[0].trim()) {
+                const intro = document.createElement('div'); intro.className = 'markdown-content mb-4';
+                intro.innerHTML = marked.parse(sections[0]); viewer.appendChild(intro);
+            }
+            for (let i = 1; i < sections.length; i++) {
+                const lines = sections[i].split('\n'), title = lines[0].trim(), content = lines.slice(1).join('\n');
+                const div = document.createElement('div'); div.className = 'foldable-section';
+                div.innerHTML = `<div class="foldable-header" onclick="toggleSection(this)"><span class="fw-bold"><i class="bi bi-chevron-right me-3 text-accent"></i>${title}</span><i class="bi bi-chevron-down opacity-50"></i></div><div class="foldable-content">${marked.parse(content)}</div>`;
+                viewer.appendChild(div);
+            }
+            document.querySelectorAll('pre code').forEach((el) => hljs.highlightElement(el));
         }
-        updateProviderHint();
+
+        function toggleSection(header) {
+            header.classList.toggle('active');
+            const content = header.nextElementSibling;
+            content.style.display = content.style.display === 'block' ? 'none' : 'block';
+            header.querySelector('.bi-chevron-right')?.classList.toggle('bi-chevron-down');
+            header.querySelector('.bi-chevron-right')?.classList.toggle('bi-chevron-right');
+        }
+
+        function closeViewer() { document.getElementById('reportContent').innerHTML = ''; switchMode('reports', false); }
+
+        async function updateProviderHint() {
+            const k = document.getElementById('provider').value, ms = document.getElementById('model');
+            ms.innerHTML = '<option>Loading...</option>';
+            try {
+                const res = await fetch(`/api/models/${k}`), models = await res.json();
+                ms.innerHTML = ''; models.forEach(m => { const o = document.createElement('option'); o.value = m; o.innerText = m; if (m === PROVIDERS[k].default_model) o.selected = true; ms.appendChild(o); });
+            } catch (e) { ms.innerHTML = '<option>Error</option>'; }
+        }
 
         async function openFolderBrowser(tid) { currentTargetId = tid; loadDirectory(document.getElementById(tid).value || 'HOME'); folderModal.show(); }
         async function loadDirectory(path) {
             const res = await fetch(`/ls?path=${encodeURIComponent(path)}`), items = await res.json();
-            const container = document.getElementById('explorerContent'); container.innerHTML = `<div class="explorer-item mb-2 p-2 bg-dark border border-secondary" onclick="loadDirectory('${path.split('/').slice(0, -1).join('/') || '/'}')">⬅ .. (Go Up)</div>`;
-            items.forEach(item => {
-                if (!item.is_dir) return;
-                const div = document.createElement('div'); div.className = 'explorer-item d-flex justify-content-between align-items-center mb-1';
-                div.innerHTML = `<span>📁 ${item.name}</span>`; div.onclick = () => loadDirectory(item.path);
-                const s = document.createElement('button'); s.className = 'btn btn-sm btn-primary px-3'; s.innerText = 'SELECT';
-                s.onclick = (e) => { e.stopPropagation(); document.getElementById(currentTargetId).value = item.path; folderModal.hide(); };
-                div.appendChild(s); container.appendChild(div);
-            });
+            const container = document.getElementById('explorerContent'); container.innerHTML = `<div class="explorer-item mb-2 p-2 bg-dark border border-secondary" onclick="loadDirectory('${path.split('/').slice(0, -1).join('/') || '/'}')"><i class="bi bi-arrow-up-circle me-2"></i>.. (Go Up)</div>`;
+            items.forEach(item => { if (!item.is_dir) return; const d = document.createElement('div'); d.className = 'explorer-item d-flex justify-content-between align-items-center mb-1'; d.innerHTML = `<span><i class="bi bi-folder-fill text-warning me-2"></i>${item.name}</span>`; d.onclick = () => loadDirectory(item.path); const s = document.createElement('button'); s.className = 'btn btn-sm btn-primary px-3'; s.innerText = 'SELECT'; s.onclick = (e) => { e.stopPropagation(); document.getElementById(currentTargetId).value = item.path; folderModal.hide(); saveState(); }; d.appendChild(s); container.appendChild(d); });
         }
 
         document.getElementById('startBtn').onclick = async () => {
-            const fd = new FormData();
-            fd.append('op_mode', currentMode); fd.append('provider', document.getElementById('provider').value); fd.append('model', document.getElementById('model').value);
+            const fd = new FormData(); fd.append('op_mode', currentMode); fd.append('provider', document.getElementById('provider').value); fd.append('model', document.getElementById('model').value);
             if (currentMode === 'batch') {
                 fd.append('prompt', document.getElementById('systemPrompt').value); fd.append('task_template', document.getElementById('taskTemplate').value);
                 fd.append('repo', document.getElementById('repoDir').value); fd.append('output', document.getElementById('outputFile').value);
-                fd.append('mode', document.getElementById('parseMode').value); fd.append('git_url', document.getElementById('gitUrl').value);
-                const fi = document.getElementById('fileInput'); if (fi.files[0]) fd.append('file', fi.files[0]); else { alert("File required"); return; }
-            } else {
-                fd.append('kb_dir', document.getElementById('kbDir').value); fd.append('kb_question', document.getElementById('kbQuestion').value);
+                fd.append('git_url', document.getElementById('gitUrl').value); fd.append('git_branch', document.getElementById('gitBranch').value);
+                const fi = document.getElementById('fileInput'); if (fi.files[0]) fd.append('file', fi.files[0]); else { alert("Taskfile (.md) required"); return; }
+            } else if (currentMode === 'kb') {
+                fd.append('prompt', document.getElementById('kbSystemPrompt').value); fd.append('kb_dir', document.getElementById('kbDir').value); fd.append('kb_question', document.getElementById('kbQuestion').value);
                 if (!document.getElementById('kbDir').value || !document.getElementById('kbQuestion').value) { alert("Missing fields"); return; }
             }
             await fetch('/run', { method: 'POST', body: fd });
         };
 
-        const chatInput = document.getElementById('chatInput'), chatSendBtn = document.getElementById('chatSendBtn'), chatBox = document.getElementById('chatBox');
-
-        chatInput.addEventListener('keydown', (e) => {
-            if (e.ctrlKey && e.key === 'Enter') {
-                e.preventDefault();
-                chatSendBtn.click();
-            }
-        });
-
+        const chatSendBtn = document.getElementById('chatSendBtn'), chatBox = document.getElementById('chatBox');
         chatSendBtn.onclick = async () => {
-            const msg = chatInput.value; if (!msg) return;
-            appendMessage('user', msg); chatInput.value = '';
-            const res = await fetch('/chat', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-                    message: msg, 
-                    repo: document.getElementById('chatRepo').value, 
-                    provider: document.getElementById('provider').value, 
-                    model: document.getElementById('model').value,
-                    system_prompt: document.getElementById('chatSystemPrompt').value
-                })
-            });
+            const ci = document.getElementById('chatInput'), msg = ci.value; if (!msg) return;
+            appendMessage('user', msg); ci.value = '';
+            await fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, repo: document.getElementById('chatRepo').value, provider: document.getElementById('provider').value, model: document.getElementById('model').value, system_prompt: document.getElementById('chatSystemPrompt').value }) });
         };
 
-        function appendMessage(role, text) {
-            const div = document.createElement('div'); 
-            div.className = `chat-bubble bubble-${role} ${role === 'assistant' ? 'markdown-content' : ''}`;
-            if (role === 'assistant') {
-                div.innerHTML = marked.parse(text);
-            } else {
-                div.innerText = text;
-            }
-            chatBox.appendChild(div); 
-            chatBox.scrollTop = chatBox.scrollHeight;
+        function appendMessage(role, text) { const d = document.createElement('div'); d.className = `chat-bubble bubble-${role} ${role === 'assistant' ? 'markdown-content' : ''}`; if (role === 'assistant') { d.innerHTML = marked.parse(text); d.querySelectorAll('pre code').forEach((el) => hljs.highlightElement(el)); } else { d.innerText = text; } chatBox.appendChild(d); chatBox.scrollTop = chatBox.scrollHeight; }
+        async function clearChat() { await fetch('/chat/clear', { method: 'POST' }); chatBox.innerHTML = ''; }
+        async function stopEngine() { await fetch('/stop', { method: 'POST' }); }
+        async function resumeEngine() { await fetch('/resume', { method: 'POST' }); }
+        async function resumeCurrentReport() { const f = document.getElementById('viewerTitle').innerText; const res = await fetch('/results/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: f }) }); const d = await res.json(); if (res.ok) { if (d.system_prompt) document.getElementById('chatSystemPrompt').value = d.system_prompt; switchMode('chat', true); } }
+        
+        function exportToPDF() {
+            const viewerTitle = document.getElementById('viewerTitle').innerText;
+            const reportContent = document.getElementById('reportContent').innerHTML;
+            
+            const printWindow = window.open('', '_blank', 'width=800,height=1000');
+            printWindow.document.write('<html><head><title>' + viewerTitle + '</title></head><body><div id="print-body"></div></body></html>');
+            
+            const style = printWindow.document.createElement('style');
+            style.textContent = `
+                body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; padding: 40px; color: #1a1a1a; line-height: 1.6; }
+                h1 { font-size: 28px; border-bottom: 2px solid #333; padding-bottom: 10px; margin-top: 0; }
+                h2 { font-size: 20px; color: #444; border-bottom: 1px solid #ddd; margin-top: 30px; padding-bottom: 5px; }
+                h3 { font-size: 16px; color: #666; margin-top: 20px; }
+                blockquote { border-left: 5px solid #6366f1; background: #f8f9fa; padding: 15px; margin: 20px 0; font-style: italic; color: #444; border-radius: 0 5px 5px 0; }
+                pre { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; margin: 20px 0; }
+                table { width: 100%; border-collapse: collapse; margin: 25px 0; }
+                th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                th { background-color: #f8f9fa; font-weight: bold; }
+                .foldable-header { background: #f1f5f9; padding: 10px; font-weight: bold; margin-top: 20px; border: 1px solid #e2e8f0; display: block; border-radius: 5px; }
+                .foldable-content { display: block !important; padding: 10px 0; }
+                .bi { display: none; }
+                @media print { pre { page-break-inside: avoid; } h2, h3 { page-break-after: avoid; } }
+            `;
+            printWindow.document.head.appendChild(style);
+            
+            const bodyDiv = printWindow.document.getElementById('print-body');
+            bodyDiv.innerHTML = '<h1>' + viewerTitle + '</h1>' + reportContent;
+            
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+            printWindow.document.close();
         }
 
-        async function clearChat() { await fetch('/chat/clear', { method: 'POST' }); chatBox.innerHTML = ''; }
+        async function summarizeCurrentReport() { const f = document.getElementById('viewerTitle').innerText; await fetch('/results/summarize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: f, provider: document.getElementById('provider').value, model: document.getElementById('model').value }) }); }
 
-        async function summarizeChat() {
-            const res = await fetch('/chat/summarize', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
-                    repo: document.getElementById('chatRepo').value, 
-                    provider: document.getElementById('provider').value, 
-                    model: document.getElementById('model').value,
-                    system_prompt: document.getElementById('chatSystemPrompt').value
-                })
-            });
+        function ansiToHtml(text) {
+            const colors = {
+                '94': 'color: #818cf8', // Info
+                '92': 'color: #4ade80', // Success
+                '93': 'color: #fbbf24', // Warning
+                '91': 'color: #f87171', // Error
+                '95': 'color: #c084fc', // Progress
+                '90': 'color: #64748b'  // Log
+            };
+            return text.replace(/\033\[(\d+)m/g, (match, code) => {
+                return code === '0' ? '</span>' : `<span style="${colors[code] || ''}">`;
+            }).replace(/\n/g, '<br>');
         }
 
         async function updateStatus() {
             const res = await fetch('/status'), data = await res.json();
             const badge = document.getElementById('statusBadge'), startC = document.getElementById('startBtnContainer'), stopC = document.getElementById('stopBtnContainer'), resumeC = document.getElementById('resumeBtnContainer');
-            if (data.is_running) { badge.className = "badge bg-success"; badge.innerHTML = "RUNNING"; startC.className = "col-6"; stopC.className = "col-6"; resumeC.className = "col-6 d-none"; }
-            else {
-                badge.className = "badge bg-secondary"; badge.innerHTML = "IDLE";
-                if (data.mode === 'batch' && data.progress > 0 && data.progress < data.total) { startC.className = "col-4"; stopC.className = "col-4 d-none"; resumeC.className = "col-8"; }
-                else { startC.className = "col-12"; stopC.className = "col-6 d-none"; resumeC.className = "col-6 d-none"; }
-            }
+            if (data.is_running) { badge.className = "badge bg-success animate-pulse"; badge.innerHTML = "RUNNING"; startC.className = "col-6"; stopC.className = "col-6"; resumeC.className = "col-6 d-none"; }
+            else { badge.className = "badge bg-secondary"; badge.innerHTML = "IDLE"; if (data.mode === 'batch' && data.progress > 0 && data.progress < data.total) { startC.className = "col-4"; stopC.className = "col-4 d-none"; resumeC.className = "col-8"; } else { startC.className = "col-12"; stopC.className = "col-6 d-none"; resumeC.className = "col-6 d-none"; } }
             document.getElementById('progressBar').style.width = (data.total > 0 ? (data.progress / data.total) * 100 : 0) + "%";
             document.getElementById('progressText').innerHTML = Math.round(data.total > 0 ? (data.progress / data.total) * 100 : 0) + "%";
             document.getElementById('countText').innerHTML = data.progress + " / " + data.total;
             document.getElementById('currentTask').innerHTML = data.current_task || "-";
-            document.getElementById('logOutput').innerHTML = data.logs;
-
-            // Sync chat history
-            if (currentMode === 'chat' && data.chat_history.length > chatBox.children.length) {
-                chatBox.innerHTML = ''; data.chat_history.forEach(m => appendMessage(role_map(m.role), m.text));
+            
+            const logOut = document.getElementById('logOutput');
+            const newHtml = ansiToHtml(data.logs);
+            if (logOut.innerHTML !== newHtml) {
+                logOut.innerHTML = newHtml;
+                logOut.scrollTop = logOut.scrollHeight;
             }
+            if (currentMode === 'chat' && data.chat_history.length > chatBox.children.length) { chatBox.innerHTML = ''; data.chat_history.forEach(m => appendMessage(m.role === 'assistant' ? 'assistant' : 'user', m.text)); }
         }
-        const role_map = r => r === 'assistant' ? 'assistant' : 'user';
-        setInterval(updateStatus, 800);
+        
+        document.addEventListener('DOMContentLoaded', () => { loadState(); switchMode(window.location.hash.replace('#', '') || 'batch', false); updateProviderHint(); setInterval(updateStatus, 1000); });
+        ['systemPrompt', 'taskTemplate', 'kbSystemPrompt', 'chatSystemPrompt', 'repoDir', 'kbDir', 'chatRepo', 'outputFile', 'gitUrl', 'gitBranch'].forEach(id => document.getElementById(id)?.addEventListener('change', saveState));
     </script>
 </body>
 
