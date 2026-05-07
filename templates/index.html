@@ -57,6 +57,18 @@
         .markdown-content tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
         .markdown-content ul, .markdown-content ol { padding-left: 1.5rem; margin-bottom: 1.5rem; }
         .markdown-content li { margin-bottom: 0.8rem; }
+        .markdown-content hr { border: 0; border-top: 1px solid var(--border); margin: 2rem 0; opacity: 1; }
+        .markdown-content strong { font-weight: 700; color: #fff; }
+        .markdown-content em { color: var(--text-dim); }
+        
+        /* Special handling for "Respuesta" or "Explicación" */
+        .markdown-content .response-block { 
+            background: rgba(129, 140, 248, 0.1); 
+            border-left: 4px solid var(--accent); 
+            padding: 15px 20px; 
+            border-radius: 4px 12px 12px 4px; 
+            margin: 1.5rem 0; 
+        }
         .progress { background-color: #020617; border: 1px solid var(--border); height: 10px !important; border-radius: 20px; }
         .progress-bar { background: linear-gradient(90deg, var(--accent), #4ade80); }
         .accordion-item { background-color: transparent; border: 1px solid var(--border); border-radius: 8px !important; margin-bottom: 1rem; overflow: hidden; }
@@ -561,9 +573,21 @@
             const d = document.createElement('div'); 
             d.className = `chat-bubble bubble-${role} ${role === 'assistant' ? 'markdown-content' : ''}`; 
             if (role === 'assistant') { 
-                // Enhanced line break handling for non-standard lists (A), B)...)
-                // If the line starts with something like "A) " or "1) ", ensure it has a line break
-                let processedText = text.replace(/^([A-Z0-9][\)\.]\s+)/gm, '\n$1');
+                // Pre-process text to fix common squashed markdown issues
+                let processedText = text
+                    .replace(/([^\n])---/g, '$1\n\n---\n\n') // Force newline before HR
+                    .replace(/---([^\n])/g, '\n\n---\n\n$1') // Force newline after HR
+                    .replace(/([^\n])(#{1,6}\s+)/g, '$1\n\n$2') // Force newline before headers
+                    .replace(/^([A-Z0-9][\)\.]\s+)/gm, '\n$1') // Force newline for list items A) or 1)
+                    .replace(/(Respuesta:|Respuesta\s+esperada:)/gi, '<div class="response-block">$1') // Wrap responses in a div
+                    .replace(/(\n\n|$)/, (match, p1) => { return text.toLowerCase().includes('respuesta') ? '</div>' + match : match; });
+
+                // If we wrapped a response block, ensure we close the div properly if needed
+                // Simple heuristic: if we opened a div, close it at the next double newline or end
+                if (processedText.includes('response-block') && !processedText.includes('</div>')) {
+                    processedText += '</div>';
+                }
+
                 d.innerHTML = marked.parse(processedText); 
                 d.querySelectorAll('pre code').forEach((el) => hljs.highlightElement(el)); 
             } else { 
