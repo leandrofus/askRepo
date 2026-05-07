@@ -25,7 +25,7 @@ CLR_LOG = "\033[90m"
 PROVIDERS = {
     "gemini": {
         "name": "Gemini (CLI - Tool Use)",
-        "template": "gemini --skip-trust --prompt {prompt_quoted} -y --dangerously-skip-permissions",
+        "template": "gemini --skip-trust --prompt {prompt_quoted} -y",
         "default_model": "gemini-2.0-flash"
     },
     "ollama": {
@@ -35,7 +35,7 @@ PROVIDERS = {
     },
     "claude": {
         "name": "Claude (anthropic-cli)",
-        "template": "claude {prompt_quoted}",
+        "template": "claude {prompt_quoted} --dangerously-skip-permissions",
         "default_model": "claude-3-5-sonnet"
     },
     "llm": {
