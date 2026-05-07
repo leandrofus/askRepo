@@ -48,10 +48,10 @@
         .markdown-content h3 { font-size: 1.2rem; color: var(--accent); }
         .markdown-content p { margin-bottom: 1.5rem; }
         .markdown-content code { background-color: rgba(129, 140, 248, 0.2); color: #a5b4fc; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
-        .markdown-content pre { background-color: #020617; border: 1px solid var(--border); padding: 1.25rem; border-radius: 10px; margin: 1.2rem 0; overflow-x: auto; }
-        .markdown-content pre code { background-color: transparent; color: inherit; padding: 0; font-size: 0.9rem; }
-        .markdown-content blockquote { border-left: 4px solid var(--accent); background: rgba(99, 102, 241, 0.05); padding: 1rem 1.5rem; margin: 1.5rem 0; color: #94a3b8; border-radius: 0 8px 8px 0; }
-        .markdown-content table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; background: #0f172a; border-radius: 8px; overflow: hidden; }
+        .markdown-content pre { background-color: #020617; border: 1px solid var(--border); padding: 1.5rem; border-radius: 12px; margin: 1.8rem 0; overflow-x: auto; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
+        .markdown-content pre code { background-color: transparent; color: #e2e8f0; padding: 0; font-size: 0.9rem; line-height: 1.5; }
+        .markdown-content blockquote { border-left: 4px solid var(--accent); background: rgba(129, 140, 248, 0.05); padding: 1rem 1.5rem; margin: 1.5rem 0; color: #94a3b8; border-radius: 0 8px 8px 0; font-style: italic; }
+        .markdown-content table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 2rem 0; background: #0f172a; border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
         .markdown-content th, .markdown-content td { border: 1px solid var(--border); padding: 12px 15px; text-align: left; }
         .markdown-content th { background-color: #1e293b; color: white; font-weight: 600; }
         .markdown-content tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
@@ -573,17 +573,19 @@
             const d = document.createElement('div'); 
             d.className = `chat-bubble bubble-${role} ${role === 'assistant' ? 'markdown-content' : ''}`; 
             if (role === 'assistant') { 
-                // Pre-process text to fix common squashed markdown issues
+                // Enhanced pre-processing for various model outputs
                 let processedText = text
-                    .replace(/--- #\s*/g, '\n\n### ') // Fix "--- #" junk and turn into header
-                    .replace(/([^\n])---/g, '$1\n\n---\n\n') // Force newline before HR
-                    .replace(/---([^\n])/g, '\n\n---\n\n$1') // Force newline after HR
-                    .replace(/([^\n])(#{1,6}\s+)/g, '$1\n\n$2') // Force newline before headers
-                    .replace(/^([A-Z0-9][\)\.]\s+)/gm, '\n$1') // Force newline for list items A) or 1)
-                    .replace(/(Respuesta:|Respuesta\s+esperada:)/gi, '<div class="response-block">$1');
+                    .replace(/\r\n/g, '\n') // Normalize newlines
+                    .replace(/--- #\s*/g, '\n\n### ') // Fix junk markers
+                    .replace(/([^\n])---/g, '$1\n\n---\n\n') // Fix squashed HR
+                    .replace(/---([^\n])/g, '\n\n---\n\n$1')
+                    .replace(/([^\n])(#{1,6}\s+)/g, '$1\n\n$2') // Fix squashed headers
+                    .replace(/^([A-Z0-9][\)\.]\s+)/gm, '\n$1'); // Fix squashed list items
 
-                // Close response block at the next double newline or start of a new question/separator
-                processedText = processedText.replace(/(<div class="response-block">[\s\S]+?)(?=\n\n|---|$)/g, '$1</div>\n\n');
+                // Controlled response block wrapping
+                if (processedText.match(/(Respuesta:|Respuesta\s+esperada:)/i)) {
+                    processedText = processedText.replace(/(Respuesta:|Respuesta\s+esperada:)([\s\S]+?)(?=\n\n|---|$)/gi, '<div class="response-block"><strong>$1</strong>$2</div>');
+                }
 
                 d.innerHTML = marked.parse(processedText.trim()); 
                 d.querySelectorAll('pre code').forEach((el) => hljs.highlightElement(el)); 
