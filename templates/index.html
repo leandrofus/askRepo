@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Ask Repo | Multi-Provider Batch</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .chat-bubble {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            max-width: 85%;
+        }
+
+        .bubble-user {
+            background: var(--accent);
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+            border-bottom-right-radius: 2px;
+        }
+
+        .bubble-assistant {
+            background: #1e293b;
+            color: #e2e8f0;
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+            border: 1px solid var(--border);
+        }
+
+        #chatBox {
+            height: 600px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            background: #020617;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .chat-input-area {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 0 0 10px 10px;
+            border: 1px solid var(--border);
+            border-top: none;
+        }
+
+        /* Premium Markdown Styling */
+        .markdown-content {
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+
+        .markdown-content h1, 
+        .markdown-content h2, 
+        .markdown-content h3 {
+            color: var(--accent);
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .markdown-content h1 { font-size: 1.75rem; }
+        .markdown-content h2 { font-size: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+        .markdown-content h3 { font-size: 1.25rem; }
+
+        .markdown-content p, 
+        .markdown-content li {
+            margin-bottom: 0.75rem;
+        }
+
+        .markdown-content strong {
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .markdown-content a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .markdown-content a:hover {
+            text-decoration: underline;
+        }
+
+        .markdown-content code {
+            background-color: rgba(129, 140, 248, 0.15);
+            color: #818cf8;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            border: 1px solid rgba(129, 140, 248, 0.2);
+        }
+
+        .markdown-content pre {
+            background-color: #0f172a;
+            border: 1px solid var(--border);
+            padding: 1.25rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            overflow-x: auto;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .markdown-content pre code {
+            background-color: transparent;
+            border: none;
+            padding: 0;
+            color: #4ade80;
+            font-size: 0.85rem;
+        }
+
+        .markdown-content table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 1.5rem 0;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .markdown-content th, 
+        .markdown-content td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+        }
+
+        .markdown-content th {
+            background-color: rgba(129, 140, 248, 0.1);
+            color: var(--accent);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.05em;
+        }
+
+        .markdown-content tr:last-child td { border-bottom: none; }
+        .markdown-content td:last-child, .markdown-content th:last-child { border-right: none; }
+
+        .markdown-content blockquote {
+            border-left: 4px solid var(--accent);
+            background-color: rgba(129, 140, 248, 0.05);
+            padding: 1rem 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 0 8px 8px 0;
+            color: #94a3b8;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body class="p-5">
+    <div class="container-fluid">
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <div class="d-flex align-items-center">
+                <div class="bg-primary p-3 rounded-3 me-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none"
+                        stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                    </svg>
+                </div>
+                <h1 class="h2 m-0 fw-bold">Ask <span class="text-accent">Repo</span> Controller</h1>
+            </div>
+            <div class="btn-group shadow" role="group">
+                <button type="button" class="btn mode-btn active" onclick="switchMode('batch')" id="modeBatch">BATCH
+                    REPO</button>
+                <button type="button" class="btn mode-btn" onclick="switchMode('kb')" id="modeKB">KNOWLEDGE
+                    BASE</button>
+                <button type="button" class="btn mode-btn" onclick="switchMode('chat')" id="modeChat">INTERACTIVE
+                    CHAT</button>
+                <button type="button" class="btn mode-btn" onclick="switchMode('reports')"
+                    id="modeReports">REPORTS</button>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-5" id="leftColumn">
+                <div class="card p-4 h-100" id="configCard">
+                    <h5 class="mb-4 d-flex align-items-center"><span class="me-2">⚙️</span> Settings & Engine</h5>
+                    <form id="mainForm">
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6"><label class="form-label">LLM Provider</label><select name="provider"
+                                    id="provider" class="form-select" onchange="updateProviderHint()">{% for key, p in
+                                    providers.items() %}<option value="{{ key }}">{{ p.name }}</option>{% endfor
+                                    %}</select></div>
+                            <div class="col-md-6"><label class="form-label">Model</label><input type="text" name="model"
+                                    id="model" class="form-control" placeholder="Default"></div>
+                        </div>
+
+                        <div id="batchInputs">
+                            <ul class="nav nav-tabs mb-3 border-secondary" role="tablist">
+                                <li class="nav-item"><button class="nav-link active text-white" id="system-tab"
+                                        data-bs-toggle="tab" data-bs-target="#system-pane" type="button">System
+                                        Prompt</button></li>
+                                <li class="nav-item"><button class="nav-link text-white" id="task-tab"
+                                        data-bs-toggle="tab" data-bs-target="#task-pane" type="button">Task
+                                        Template</button></li>
+                            </ul>
+                            <div class="tab-content mb-4">
+                                <div class="tab-pane fade show active" id="system-pane"><textarea name="prompt"
+                                        id="systemPrompt" class="form-control"
+                                        rows="4">{{ default_system_prompt }}</textarea></div>
+                                <div class="tab-pane fade" id="task-pane"><textarea name="task_template"
+                                        id="taskTemplate" class="form-control"
+                                        rows="8">{{ default_task_template }}</textarea></div>
+                            </div>
+                            <div class="mb-4 border-top border-secondary pt-3">
+                                <h6 class="text-accent mb-3 small">REPOSITORIO</h6>
+                                <div class="row g-3">
+                                    <div class="col-12"><label class="form-label small">Git URL</label><input
+                                            type="text" id="gitUrl" class="form-control"></div>
+                                    <div class="col-12"><label class="form-label small">Local Path</label>
+                                        <div class="input-group shadow-sm"><input type="text" id="repoDir"
+                                                class="form-control" value="./"><button
+                                                class="btn btn-outline-secondary px-3" type="button"
+                                                onclick="openFolderBrowser('repoDir')">📁 BROWSE</button></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-12"><label class="form-label small">Taskfile</label><input type="file"
+                                        id="fileInput" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label small">Parsing</label><select
+                                        id="parseMode" class="form-select">
+                                        <option value="default">Default</option>
+                                        <option value="csv">CSV</option>
+                                        <option value="pipe">Pipe</option>
+                                    </select></div>
+                                <div class="col-md-6"><label class="form-label small">Output</label><input type="text"
+                                        id="outputFile" class="form-control" value="Manual.md"></div>
+                            </div>
+                        </div>
+
+                        <div id="kbInputs" class="d-none">
+                            <div class="mb-4"><label class="form-label">KB Folder</label>
+                                <div class="input-group shadow-sm"><input type="text" id="kbDir"
+                                        class="form-control"><button class="btn btn-outline-secondary px-3"
+                                        type="button" onclick="openFolderBrowser('kbDir')">📁 BROWSE</button></div>
+                            </div>
+                            <div class="mb-4"><label class="form-label">Question</label><textarea id="kbQuestion"
+                                    class="form-control" rows="6"></textarea></div>
+                        </div>
+
+                        <div id="chatSettings" class="d-none">
+                            <div class="mb-4">
+                                <label class="form-label">Chat System Prompt</label>
+                                <textarea id="chatSystemPrompt" class="form-control mb-3" rows="3" placeholder="Define the AI persona for this chat..."></textarea>
+                                
+                                <label class="form-label">Session Target Repo</label>
+                                <div class="input-group shadow-sm"><input type="text" id="chatRepo" class="form-control"
+                                        value="./"><button class="btn btn-outline-secondary px-3" type="button"
+                                        onclick="openFolderBrowser('chatRepo')">📁 BROWSE</button></div>
+                                <div class="mt-1 small text-dim">Context is maintained while the server is running.
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-danger w-100" onclick="clearChat()">CLEAR CHAT
+                                CONTEXT</button>
+                        </div>
+
+                        <div class="row g-2 mt-3" id="mainActionBtns">
+                            <div class="col-12" id="startBtnContainer"><button type="button" id="startBtn"
+                                    class="btn btn-primary w-100 shadow">RUN INVESTIGATION</button></div>
+                            <div class="col-6 d-none" id="stopBtnContainer"><button type="button" id="stopBtn"
+                                    class="btn btn-danger w-100 shadow">STOP</button></div>
+                            <div class="col-6 d-none" id="resumeBtnContainer"><button type="button" id="resumeBtn"
+                                    class="btn btn-warning w-100 shadow">RESUME</button></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="card p-4 h-100 d-none" id="reportsCard">
+                    <h5 class="mb-4">📁 Past Investigations</h5>
+                    <div id="reportsList" class="list-group list-group-flush"></div>
+                </div>
+            </div>
+
+            <div class="col-lg-7" id="rightColumn">
+                <div class="card p-4 h-100" id="monitorCard">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="m-0 text-accent">Monitoring Station</h5><span id="statusBadge"
+                            class="badge bg-secondary">IDLE</span>
+                    </div>
+                    <div id="progressSection" class="mb-4">
+                        <div class="d-flex justify-content-between mb-2"><span>Overall: <span
+                                    id="countText">0/0</span></span><span id="progressText">0%</span></div>
+                        <div class="progress">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div id="taskSection" class="mb-3"><label class="small text-dim">CURRENT TASK</label><span
+                            id="currentTask" class="fw-semibold text-info d-block">-</span></div>
+                    <pre id="logOutput" class="flex-grow-1 shadow-inner"></pre>
+                </div>
+
+                <div class="card p-4 h-100 d-none" id="chatCard">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="m-0 text-accent">Interactive Investigation</h5><span id="chatStatus"
+                            class="badge bg-info">SESSION ACTIVE</span>
+                    </div>
+                    <div id="chatBox"></div>
+                    <div class="chat-input-area d-flex gap-2">
+                        <textarea id="chatInput" class="form-control" rows="1"
+                            placeholder="Ask anything about the repo..."></textarea>
+                        <button class="btn btn-primary px-4" id="chatSendBtn">SEND</button>
+                    </div>
+                </div>
+
+                <div class="card p-4 h-100 d-none" id="viewerCard">
+                    <div class="d-flex justify-content-between mb-4">
+                        <h5 id="viewerTitle">Viewer</h5><button class="btn btn-sm btn-outline-secondary"
+                            onclick="closeViewer()">CLOSE</button>
+                    </div>
+                    <div id="reportContent" class="p-4 bg-dark rounded border border-secondary shadow-inner markdown-content"
+                        style="height: 700px; overflow-y: auto;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="folderModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-secondary">
+                    <h5>📁 Select Folder</h5><button type="button" class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="explorerContent" class="p-3"></div>
+                </div>
+                <div class="modal-footer border-secondary"><button type="button" class="btn btn-secondary"
+                        data-bs-dismiss="modal">CANCEL</button></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const PROVIDERS = JSON.parse('{{ providers_json|safe }}');
+        let currentTargetId = '', currentMode = 'batch';
+        const folderModal = new bootstrap.Modal(document.getElementById('folderModal'));
+
+        function switchMode(mode) {
+            currentMode = mode;
+            ['modeBatch', 'modeKB', 'modeChat', 'modeReports'].forEach(id => document.getElementById(id).classList.toggle('active', id === 'mode' + mode.charAt(0).toUpperCase() + mode.slice(1)));
+            document.getElementById('configCard').classList.toggle('d-none', mode === 'reports');
+            document.getElementById('reportsCard').classList.toggle('d-none', mode !== 'reports');
+            document.getElementById('monitorCard').classList.toggle('d-none', mode === 'reports' || mode === 'chat');
+            document.getElementById('chatCard').classList.toggle('d-none', mode !== 'chat');
+            document.getElementById('viewerCard').classList.toggle('d-none', mode !== 'reports');
+
+            document.getElementById('batchInputs').classList.toggle('d-none', mode !== 'batch');
+            document.getElementById('kbInputs').classList.toggle('d-none', mode !== 'kb');
+            document.getElementById('chatSettings').classList.toggle('d-none', mode !== 'chat');
+            document.getElementById('mainActionBtns').classList.toggle('d-none', mode === 'chat' || mode === 'reports');
+
+            if (mode === 'reports') loadReportsList();
+            if (mode === 'batch') document.getElementById('startBtn').innerText = 'RUN INVESTIGATION';
+            if (mode === 'kb') document.getElementById('startBtn').innerText = 'ASK KNOWLEDGE BASE';
+        }
+
+        async function loadReportsList() {
+            const res = await fetch('/results'), files = await res.json();
+            const list = document.getElementById('reportsList'); list.innerHTML = '';
+            files.forEach(f => {
+                const btn = document.createElement('button'); btn.className = 'list-group-item list-group-item-action bg-transparent text-white border-secondary small py-3 d-flex justify-content-between';
+                btn.innerHTML = `<span>📄 ${f}</span><span class="text-accent">VIEW</span>`;
+                btn.onclick = async () => {
+                    const r = await fetch(`/results/${f}`), d = await r.json();
+                    document.getElementById('viewerTitle').innerText = f;
+                    document.getElementById('reportContent').innerHTML = d.html;
+                };
+                list.appendChild(btn);
+            });
+        }
+
+        function closeViewer() { document.getElementById('reportContent').innerHTML = ''; }
+        function updateProviderHint() {
+            const k = document.getElementById('provider').value;
+            document.getElementById('model').placeholder = PROVIDERS[k].default_model;
+        }
+        updateProviderHint();
+
+        async function openFolderBrowser(tid) { currentTargetId = tid; loadDirectory(document.getElementById(tid).value || 'HOME'); folderModal.show(); }
+        async function loadDirectory(path) {
+            const res = await fetch(`/ls?path=${encodeURIComponent(path)}`), items = await res.json();
+            const container = document.getElementById('explorerContent'); container.innerHTML = `<div class="explorer-item mb-2 p-2 bg-dark border border-secondary" onclick="loadDirectory('${path.split('/').slice(0, -1).join('/') || '/'}')">⬅ .. (Go Up)</div>`;
+            items.forEach(item => {
+                if (!item.is_dir) return;
+                const div = document.createElement('div'); div.className = 'explorer-item d-flex justify-content-between align-items-center mb-1';
+                div.innerHTML = `<span>📁 ${item.name}</span>`; div.onclick = () => loadDirectory(item.path);
+                const s = document.createElement('button'); s.className = 'btn btn-sm btn-primary px-3'; s.innerText = 'SELECT';
+                s.onclick = (e) => { e.stopPropagation(); document.getElementById(currentTargetId).value = item.path; folderModal.hide(); };
+                div.appendChild(s); container.appendChild(div);
+            });
+        }
+
+        document.getElementById('startBtn').onclick = async () => {
+            const fd = new FormData();
+            fd.append('op_mode', currentMode); fd.append('provider', document.getElementById('provider').value); fd.append('model', document.getElementById('model').value);
+            if (currentMode === 'batch') {
+                fd.append('prompt', document.getElementById('systemPrompt').value); fd.append('task_template', document.getElementById('taskTemplate').value);
+                fd.append('repo', document.getElementById('repoDir').value); fd.append('output', document.getElementById('outputFile').value);
+                fd.append('mode', document.getElementById('parseMode').value); fd.append('git_url', document.getElementById('gitUrl').value);
+                const fi = document.getElementById('fileInput'); if (fi.files[0]) fd.append('file', fi.files[0]); else { alert("File required"); return; }
+            } else {
+                fd.append('kb_dir', document.getElementById('kbDir').value); fd.append('kb_question', document.getElementById('kbQuestion').value);
+                if (!document.getElementById('kbDir').value || !document.getElementById('kbQuestion').value) { alert("Missing fields"); return; }
+            }
+            await fetch('/run', { method: 'POST', body: fd });
+        };
+
+        const chatInput = document.getElementById('chatInput'), chatSendBtn = document.getElementById('chatSendBtn'), chatBox = document.getElementById('chatBox');
+
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                chatSendBtn.click();
+            }
+        });
+
+        chatSendBtn.onclick = async () => {
+            const msg = chatInput.value; if (!msg) return;
+            appendMessage('user', msg); chatInput.value = '';
+            const res = await fetch('/chat', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+                    message: msg, 
+                    repo: document.getElementById('chatRepo').value, 
+                    provider: document.getElementById('provider').value, 
+                    model: document.getElementById('model').value,
+                    system_prompt: document.getElementById('chatSystemPrompt').value
+                })
+            });
+        };
+
+        function appendMessage(role, text) {
+            const div = document.createElement('div'); 
+            div.className = `chat-bubble bubble-${role} ${role === 'assistant' ? 'markdown-content' : ''}`;
+            if (role === 'assistant') {
+                div.innerHTML = marked.parse(text);
+            } else {
+                div.innerText = text;
+            }
+            chatBox.appendChild(div); 
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        async function clearChat() { await fetch('/chat/clear', { method: 'POST' }); chatBox.innerHTML = ''; }
+
+        async function updateStatus() {
+            const res = await fetch('/status'), data = await res.json();
+            const badge = document.getElementById('statusBadge'), startC = document.getElementById('startBtnContainer'), stopC = document.getElementById('stopBtnContainer'), resumeC = document.getElementById('resumeBtnContainer');
+            if (data.is_running) { badge.className = "badge bg-success"; badge.innerHTML = "RUNNING"; startC.className = "col-6"; stopC.className = "col-6"; resumeC.className = "col-6 d-none"; }
+            else {
+                badge.className = "badge bg-secondary"; badge.innerHTML = "IDLE";
+                if (data.mode === 'batch' && data.progress > 0 && data.progress < data.total) { startC.className = "col-4"; stopC.className = "col-4 d-none"; resumeC.className = "col-8"; }
+                else { startC.className = "col-12"; stopC.className = "col-6 d-none"; resumeC.className = "col-6 d-none"; }
+            }
+            document.getElementById('progressBar').style.width = (data.total > 0 ? (data.progress / data.total) * 100 : 0) + "%";
+            document.getElementById('progressText').innerHTML = Math.round(data.total > 0 ? (data.progress / data.total) * 100 : 0) + "%";
+            document.getElementById('countText').innerHTML = data.progress + " / " + data.total;
+            document.getElementById('currentTask').innerHTML = data.current_task || "-";
+            document.getElementById('logOutput').innerHTML = data.logs;
+
+            // Sync chat history
+            if (currentMode === 'chat' && data.chat_history.length > chatBox.children.length) {
+                chatBox.innerHTML = ''; data.chat_history.forEach(m => appendMessage(role_map(m.role), m.text));
+            }
+        }
+        const role_map = r => r === 'assistant' ? 'assistant' : 'user';
+        setInterval(updateStatus, 800);
+    </script>
+</body>
+
+</html>

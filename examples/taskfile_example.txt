@@ -1,0 +1,13 @@
+The Universal Knowledge capabilities identified include:
+* Software Architecture
+     * Domain-Driven Design (DDD) patterns in Python
+     * Microservices communication using gRPC and Protobuf
+     * Implementing Event Sourcing with Apache Kafka
+* Data Science & ML
+     * Exploratory Data Analysis (EDA) using Pandas and Seaborn
+     * Building neural networks with PyTorch for image classification
+     * Deploying models as APIs using FastAPI and Docker
+* Cloud Infrastructure
+     * Infrastructure as Code (IaC) with Terraform and AWS
+     * Managing Kubernetes clusters and Helm charts
+     * CI/CD pipeline automation with GitHub Actions
