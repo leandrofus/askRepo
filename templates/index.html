@@ -549,7 +549,28 @@
             await fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, repo: document.getElementById('chatRepo').value, provider: document.getElementById('provider').value, model: document.getElementById('model').value, system_prompt: document.getElementById('chatSystemPrompt').value }) });
         };
 
-        function appendMessage(role, text) { const d = document.createElement('div'); d.className = `chat-bubble bubble-${role} ${role === 'assistant' ? 'markdown-content' : ''}`; if (role === 'assistant') { d.innerHTML = marked.parse(text); d.querySelectorAll('pre code').forEach((el) => hljs.highlightElement(el)); } else { d.innerText = text; } chatBox.appendChild(d); chatBox.scrollTop = chatBox.scrollHeight; }
+        // Configure marked for better markdown rendering
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            headerIds: false,
+            mangle: false
+        });
+
+        function appendMessage(role, text) { 
+            const d = document.createElement('div'); 
+            d.className = `chat-bubble bubble-${role} ${role === 'assistant' ? 'markdown-content' : ''}`; 
+            if (role === 'assistant') { 
+                // Ensure double newlines for proper markdown block separation
+                const formattedText = text.replace(/\n/g, '  \n');
+                d.innerHTML = marked.parse(text); 
+                d.querySelectorAll('pre code').forEach((el) => hljs.highlightElement(el)); 
+            } else { 
+                d.innerText = text; 
+            } 
+            chatBox.appendChild(d); 
+            chatBox.scrollTop = chatBox.scrollHeight; 
+        }
         async function clearChat() { await fetch('/chat/clear', { method: 'POST' }); chatBox.innerHTML = ''; }
         async function stopEngine() { await fetch('/stop', { method: 'POST' }); }
         async function resumeEngine() { await fetch('/resume', { method: 'POST' }); }
