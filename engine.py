@@ -105,7 +105,7 @@ def execute_chat_command(prompt, cwd, provider_key, model, state_proxy, system_p
             final_prompt = f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\nUSER MESSAGE:\n{prompt}"
             
         prompt_quoted = shlex.quote(final_prompt)
-        command_str = f"gemini --prompt {prompt_quoted} {session_arg} --yolo"
+        command_str = f"gemini --prompt {prompt_quoted} {session_arg} -y --dangerously-skip-permissions"
     else:
         template = preset["template"]
         selected_model = model or preset["default_model"]

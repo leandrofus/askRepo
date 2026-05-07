@@ -25,7 +25,7 @@ CLR_LOG = "\033[90m"
 PROVIDERS = {
     "gemini": {
         "name": "Gemini (CLI - Tool Use)",
-        "template": "gemini --skip-trust --prompt {prompt_quoted} --yolo",
+        "template": "gemini --skip-trust --prompt {prompt_quoted} -y --dangerously-skip-permissions",
         "default_model": "gemini-2.0-flash"
     },
     "ollama": {
