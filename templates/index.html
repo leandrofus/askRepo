@@ -29,6 +29,8 @@
         label { color: var(--text-main) !important; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8; }
         .form-control, .form-select { background-color: #020617; border: 1px solid var(--border); color: #ffffff !important; border-radius: 8px; padding: 0.75rem; }
         .form-control:focus, .form-select:focus { background-color: #020617; border-color: var(--accent); box-shadow: 0 0 0 0.25rem rgba(129, 140, 248, 0.15); }
+        .code-editor { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; background-color: #010409 !important; color: #79c0ff !important; line-height: 1.5; }
+        .code-editor::placeholder { color: #484f58; }
         .text-accent { color: var(--accent) !important; }
         .text-dim { color: var(--text-dim) !important; }
         .text-light-main { color: #f1f5f9 !important; }
@@ -163,11 +165,11 @@
                                     <div id="batchCore">
                                         <div class="mb-3">
                                             <label class="form-label">System Instruction Override</label>
-                                            <textarea id="systemPrompt" class="form-control" rows="8">{{ default_system_prompt }}</textarea>
+                                            <textarea id="systemPrompt" class="form-control code-editor" rows="8">{{ default_system_prompt }}</textarea>
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Task Template</label>
-                                            <textarea id="taskTemplate" class="form-control" rows="8">{{ default_task_template }}</textarea>
+                                            <textarea id="taskTemplate" class="form-control code-editor" rows="8">{{ default_task_template }}</textarea>
                                         </div>
                                         <div class="row mb-3">
                                             <div class="col-12">
@@ -186,7 +188,7 @@
                                     <div id="kbPrompts" class="d-none">
                                         <div class="mb-3">
                                             <label class="form-label">KB System Prompt</label>
-                                            <textarea id="kbSystemPrompt" class="form-control" rows="8">{{ default_system_prompt }}</textarea>
+                                            <textarea id="kbSystemPrompt" class="form-control code-editor" rows="8">{{ default_system_prompt }}</textarea>
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">Natural Language Question</label>
@@ -196,7 +198,7 @@
                                     <div id="chatPrompts" class="d-none">
                                         <div class="mb-3">
                                             <label class="form-label">Chat Persona</label>
-                                            <textarea id="chatSystemPrompt" class="form-control" rows="8">Act as a senior software architect. Provide deep technical analysis.</textarea>
+                                            <textarea id="chatSystemPrompt" class="form-control code-editor" rows="8">Act as a senior software architect. Provide deep technical analysis.</textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -365,12 +367,26 @@
             localStorage.setItem('askrepo_premium_v3', JSON.stringify(state));
         }
 
-        function loadState() {
+        async function loadState() {
             const saved = localStorage.getItem('askrepo_premium_v3');
             if (saved) {
                 const s = JSON.parse(saved);
-                Object.keys(s).forEach(k => { const el = document.getElementById(k); if (el && s[k]) el.value = s[k]; });
-                updateProviderHint();
+                // Load provider first
+                if (s.provider) document.getElementById('provider').value = s.provider;
+                
+                // Wait for models to load then set model
+                await updateProviderHint();
+                if (s.model) document.getElementById('model').value = s.model;
+                
+                // Load the rest
+                Object.keys(s).forEach(k => { 
+                    if (k !== 'provider' && k !== 'model') {
+                        const el = document.getElementById(k); 
+                        if (el && s[k]) el.value = s[k]; 
+                    }
+                });
+            } else {
+                await updateProviderHint();
             }
         }
 
@@ -685,7 +701,11 @@
             if (currentMode === 'chat' && data.chat_history.length > chatBox.children.length) { chatBox.innerHTML = ''; data.chat_history.forEach(m => appendMessage(m.role === 'assistant' ? 'assistant' : 'user', m.text)); }
         }
         
-        document.addEventListener('DOMContentLoaded', () => { loadState(); switchMode(window.location.hash.replace('#', '') || 'batch', false); updateProviderHint(); setInterval(updateStatus, 1000); });
+        document.addEventListener('DOMContentLoaded', async () => { 
+            await loadState(); 
+            switchMode(window.location.hash.replace('#', '') || 'batch', false); 
+            setInterval(updateStatus, 1000); 
+        });
         ['systemPrompt', 'taskTemplate', 'kbSystemPrompt', 'chatSystemPrompt', 'repoDir', 'kbDir', 'chatRepo', 'outputFile', 'gitUrl', 'gitBranch'].forEach(id => document.getElementById(id)?.addEventListener('change', saveState));
     </script>
 </body>
