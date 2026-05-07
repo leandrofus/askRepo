@@ -35,19 +35,19 @@
         .btn-primary { background-color: var(--accent); border: none; font-weight: 600; padding: 0.8rem 1.5rem; }
         .btn-primary:hover { background-color: #6366f1; transform: translateY(-1px); }
         #logOutput { background-color: #020617; color: #4ade80; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; padding: 1rem; border-radius: 8px; height: 400px; overflow-y: auto; border: 1px solid var(--border); white-space: pre-wrap; }
-        .chat-bubble { padding: 14px 18px; border-radius: 16px; margin-bottom: 12px; max-width: 85%; position: relative; animation: fadeIn 0.3s ease; }
+        .chat-bubble { padding: 20px 25px; border-radius: 20px; margin-bottom: 15px; max-width: 85%; position: relative; animation: fadeIn 0.3s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        .bubble-user { background: linear-gradient(135deg, var(--accent), #6366f1); color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 2px; }
-        .bubble-assistant { background: #1e293b; color: #e2e8f0; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid var(--border); }
-        #chatBox { height: 600px; overflow-y: auto; display: flex; flex-direction: column; padding: 20px; background: #020617; border-radius: 12px; border: 1px solid var(--border); gap: 4px; }
-        .chat-input-area { background: #0f172a; padding: 15px; border-radius: 0 0 12px 12px; border: 1px solid var(--border); border-top: none; }
-        .markdown-content { color: #e2e8f0; line-height: 1.8; font-size: 1rem; }
-        .markdown-content h1, .markdown-content h2, .markdown-content h3 { color: white; margin-top: 1.5rem; margin-bottom: 1rem; font-weight: 700; }
+        .bubble-user { background: linear-gradient(135deg, var(--accent), #6366f1); color: white; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 4px; box-shadow: 0 4px 15px rgba(129, 140, 248, 0.2); }
+        .bubble-assistant { background: #1e293b; color: #f1f5f9; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        #chatBox { height: 600px; overflow-y: auto; display: flex; flex-direction: column; padding: 25px; background: #020617; border-radius: 12px; border: 1px solid var(--border); gap: 10px; }
+        .chat-input-area { background: #0f172a; padding: 20px; border-radius: 0 0 12px 12px; border: 1px solid var(--border); border-top: none; }
+        .markdown-content { color: #e2e8f0; line-height: 1.7; font-size: 1.05rem; font-weight: 400; }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 { color: white; margin-top: 2rem; margin-bottom: 1.2rem; font-weight: 700; }
         .markdown-content h1 { font-size: 1.75rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
         .markdown-content h2 { font-size: 1.4rem; }
-        .markdown-content h3 { font-size: 1.1rem; color: var(--accent); }
-        .markdown-content p { margin-bottom: 1.2rem; }
-        .markdown-content code { background-color: rgba(129, 140, 248, 0.15); color: #a5b4fc; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+        .markdown-content h3 { font-size: 1.2rem; color: var(--accent); }
+        .markdown-content p { margin-bottom: 1.5rem; }
+        .markdown-content code { background-color: rgba(129, 140, 248, 0.2); color: #a5b4fc; padding: 2px 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
         .markdown-content pre { background-color: #020617; border: 1px solid var(--border); padding: 1.25rem; border-radius: 10px; margin: 1.2rem 0; overflow-x: auto; }
         .markdown-content pre code { background-color: transparent; color: inherit; padding: 0; font-size: 0.9rem; }
         .markdown-content blockquote { border-left: 4px solid var(--accent); background: rgba(99, 102, 241, 0.05); padding: 1rem 1.5rem; margin: 1.5rem 0; color: #94a3b8; border-radius: 0 8px 8px 0; }
@@ -56,7 +56,7 @@
         .markdown-content th { background-color: #1e293b; color: white; font-weight: 600; }
         .markdown-content tr:nth-child(even) { background-color: rgba(255,255,255,0.02); }
         .markdown-content ul, .markdown-content ol { padding-left: 1.5rem; margin-bottom: 1.5rem; }
-        .markdown-content li { margin-bottom: 0.5rem; }
+        .markdown-content li { margin-bottom: 0.8rem; }
         .progress { background-color: #020617; border: 1px solid var(--border); height: 10px !important; border-radius: 20px; }
         .progress-bar { background: linear-gradient(90deg, var(--accent), #4ade80); }
         .accordion-item { background-color: transparent; border: 1px solid var(--border); border-radius: 8px !important; margin-bottom: 1rem; overflow: hidden; }
@@ -561,9 +561,10 @@
             const d = document.createElement('div'); 
             d.className = `chat-bubble bubble-${role} ${role === 'assistant' ? 'markdown-content' : ''}`; 
             if (role === 'assistant') { 
-                // Ensure double newlines for proper markdown block separation
-                const formattedText = text.replace(/\n/g, '  \n');
-                d.innerHTML = marked.parse(text); 
+                // Enhanced line break handling for non-standard lists (A), B)...)
+                // If the line starts with something like "A) " or "1) ", ensure it has a line break
+                let processedText = text.replace(/^([A-Z0-9][\)\.]\s+)/gm, '\n$1');
+                d.innerHTML = marked.parse(processedText); 
                 d.querySelectorAll('pre code').forEach((el) => hljs.highlightElement(el)); 
             } else { 
                 d.innerText = text; 
