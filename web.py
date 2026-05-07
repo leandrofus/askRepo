@@ -1,4 +1,5 @@
 import os
+import subprocess
 import threading
 import time
 import json
@@ -8,6 +9,7 @@ from werkzeug.utils import secure_filename
 from config import execution_state, PROVIDERS, DEFAULT_SYSTEM_PROMPT, DEFAULT_TASK_TEMPLATE, DEFAULT_KB_TEMPLATE, CLR_INFO, CLR_ERROR, CLR_SUCCESS, CLR_WARNING, CLR_RESET
 from parser import parse_capabilities
 from engine import execute_llm_command, execute_chat_command, fetch_available_models
+from ollama_marketplace import search_ollama_marketplace
 from git_utils import run_git_command
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
@@ -135,7 +137,10 @@ def summarize_chat():
                 f.write(f"\n<div class='system-prompt-block'><strong>System Prompt used for Summary</strong>\n{system_prompt}</div>\n\n")
                 f.write(f"\n## 📝 Session Summary\n{response}\n\n---\n\n")
         
-        execution_state["chat_history"].append({"role": "assistant", "text": f"### 📝 SESSION SUMMARY\n{response}"})
+        execution_state["chat_history"].append({
+            "role": "assistant", 
+            "text": f"<div class='system-prompt-block'><strong>System Prompt used for Summary</strong>\n{system_prompt}</div>\n\n### 📝 SESSION SUMMARY\n{response}"
+        })
         execution_state["is_running"] = False
         
     threading.Thread(target=summary_bg).start()
@@ -214,6 +219,50 @@ def get_status(): return jsonify(execution_state)
 def get_models(provider):
     models = fetch_available_models(provider)
     return jsonify(models)
+
+@app.route('/api/ollama/marketplace')
+def ollama_marketplace():
+    query = request.args.get('q', '')
+    if not query:
+        return jsonify([])
+    results = search_ollama_marketplace(query)
+    return jsonify(results)
+
+@app.route('/api/ollama/pull', methods=['POST'])
+def ollama_pull():
+    data = request.json
+    model_name = data.get('model')
+    if not model_name:
+        return jsonify({"error": "No model specified"}), 400
+    
+    execution_state["is_running"] = True
+    execution_state["logs"] = f"{CLR_INFO}[OLLAMA] Pulling model {model_name}...{CLR_RESET}\n"
+    
+    def pull_bg():
+        try:
+            # We use subprocess directly to see the progress if possible
+            process = subprocess.Popen(
+                ["ollama", "pull", model_name],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                universal_newlines=True
+            )
+            for line in process.stdout:
+                execution_state["logs"] += line
+            process.wait()
+            if process.returncode == 0:
+                execution_state["logs"] += f"{CLR_SUCCESS}[OLLAMA] Model {model_name} pulled successfully.{CLR_RESET}\n"
+            else:
+                execution_state["logs"] += f"{CLR_ERROR}[OLLAMA] Failed to pull model {model_name}.{CLR_RESET}\n"
+        except Exception as e:
+            execution_state["logs"] += f"{CLR_ERROR}[OLLAMA] Error: {e}{CLR_RESET}\n"
+        finally:
+            execution_state["is_running"] = False
+            
+    threading.Thread(target=pull_bg).start()
+    return jsonify({"status": "processing"})
 
 def run_git_command(args, cwd, state_proxy):
     state_proxy["logs"] += f"Executing: git {' '.join(args)}\n"

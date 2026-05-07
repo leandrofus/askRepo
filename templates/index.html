@@ -179,6 +179,7 @@
                     BASE</button>
                 <button type="button" class="btn mode-btn" onclick="switchMode('chat')" id="modeChat">INTERACTIVE
                     CHAT</button>
+                <button type="button" class="btn mode-btn" onclick="switchMode('marketplace')" id="modeMarketplace">MARKETPLACE</button>
                 <button type="button" class="btn mode-btn" onclick="switchMode('reports')"
                     id="modeReports">REPORTS</button>
             </div>
@@ -280,6 +281,19 @@
                         </div>
                     </form>
                 </div>
+                <div class="card p-4 h-100 d-none" id="marketplaceSettingsCard">
+                    <h5 class="mb-4 d-flex align-items-center"><span class="me-2">🏪</span> Ollama Marketplace</h5>
+                    <div class="mb-4">
+                        <label class="form-label">Search Models</label>
+                        <div class="input-group shadow-sm">
+                            <input type="text" id="marketplaceSearch" class="form-control" placeholder="e.g. deepseek, llama3, phi...">
+                            <button class="btn btn-primary px-3" type="button" onclick="searchMarketplace()">🔍 SEARCH</button>
+                        </div>
+                    </div>
+                    <div id="marketplaceInfo" class="small text-dim mt-2">
+                        Browse the official Ollama library and pull models directly to your local instance.
+                    </div>
+                </div>
                 <div class="card p-4 h-100 d-none" id="reportsCard">
                     <h5 class="mb-4">📁 Past Investigations</h5>
                     <div id="reportsList" class="list-group list-group-flush"></div>
@@ -303,6 +317,18 @@
                     <div id="taskSection" class="mb-3"><label class="small text-dim">CURRENT TASK</label><span
                             id="currentTask" class="fw-semibold text-info d-block">-</span></div>
                     <pre id="logOutput" class="flex-grow-1 shadow-inner"></pre>
+                </div>
+
+                <div class="card p-4 h-100 d-none" id="marketplaceCard">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="m-0 text-accent">Marketplace Results</h5>
+                        <span id="marketplaceStatus" class="badge bg-secondary">OLLAMA.COM</span>
+                    </div>
+                    <div id="marketplaceResults" style="height: 600px; overflow-y: auto;" class="pe-2">
+                        <div class="text-center text-dim mt-5">
+                            <p>Enter a query to search models in the marketplace.</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="card p-4 h-100 d-none" id="chatCard">
@@ -354,17 +380,19 @@
 
         function switchMode(mode) {
             currentMode = mode;
-            ['modeBatch', 'modeKB', 'modeChat', 'modeReports'].forEach(id => document.getElementById(id).classList.toggle('active', id === 'mode' + mode.charAt(0).toUpperCase() + mode.slice(1)));
+            ['modeBatch', 'modeKB', 'modeChat', 'modeMarketplace', 'modeReports'].forEach(id => document.getElementById(id).classList.toggle('active', id === 'mode' + mode.charAt(0).toUpperCase() + mode.slice(1)));
             document.getElementById('configCard').classList.toggle('d-none', mode === 'reports');
             document.getElementById('reportsCard').classList.toggle('d-none', mode !== 'reports');
-            document.getElementById('monitorCard').classList.toggle('d-none', mode === 'reports' || mode === 'chat');
+            document.getElementById('monitorCard').classList.toggle('d-none', mode === 'reports' || mode === 'chat' || mode === 'marketplace');
             document.getElementById('chatCard').classList.toggle('d-none', mode !== 'chat');
+            document.getElementById('marketplaceCard').classList.toggle('d-none', mode !== 'marketplace');
             document.getElementById('viewerCard').classList.toggle('d-none', mode !== 'reports');
 
             document.getElementById('batchInputs').classList.toggle('d-none', mode !== 'batch');
             document.getElementById('kbInputs').classList.toggle('d-none', mode !== 'kb');
             document.getElementById('chatSettings').classList.toggle('d-none', mode !== 'chat');
-            document.getElementById('mainActionBtns').classList.toggle('d-none', mode === 'chat' || mode === 'reports');
+            document.getElementById('marketplaceSettingsCard').classList.toggle('d-none', mode !== 'marketplace');
+            document.getElementById('mainActionBtns').classList.toggle('d-none', mode === 'chat' || mode === 'reports' || mode === 'marketplace');
 
             if (mode === 'reports') loadReportsList();
             if (mode === 'batch') document.getElementById('startBtn').innerText = 'RUN INVESTIGATION';
