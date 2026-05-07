@@ -577,6 +577,20 @@
             await fetch('/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg, repo: document.getElementById('chatRepo').value, provider: document.getElementById('provider').value, model: document.getElementById('model').value, system_prompt: document.getElementById('chatSystemPrompt').value }) });
         };
 
+        // Add Ctrl+Enter support
+        document.getElementById('chatInput').addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                chatSendBtn.click();
+            }
+        });
+        document.getElementById('kbQuestion').addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('startBtn').click();
+            }
+        });
+
         // Configure marked for better markdown rendering
         marked.setOptions({
             breaks: true,
