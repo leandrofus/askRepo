@@ -41,7 +41,12 @@ PROVIDERS = {
     "llm": {
         "name": "LLM (SimonW Tool)",
         "template": "llm -m {model} {prompt_quoted}",
-        "default_model": "gpt-4"
+        "default_model": "gpt-4o"
+    },
+    "codex": {
+        "name": "Codex (CLI)",
+        "template": "codex --model {model} --prompt {prompt_quoted}",
+        "default_model": "gpt-5.4"
     },
     "custom": {
         "name": "Custom Command",

@@ -194,8 +194,8 @@
                                     id="provider" class="form-select" onchange="updateProviderHint()">{% for key, p in
                                     providers.items() %}<option value="{{ key }}">{{ p.name }}</option>{% endfor
                                     %}</select></div>
-                            <div class="col-md-6"><label class="form-label">Model</label><input type="text" name="model"
-                                    id="model" class="form-control" placeholder="Default"></div>
+                            <div class="col-md-6"><label class="form-label">Model</label><select name="model"
+                                    id="model" class="form-select"></select></div>
                         </div>
 
                         <div id="batchInputs">
@@ -264,8 +264,10 @@
                                 <div class="mt-1 small text-dim">Context is maintained while the server is running.
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-outline-danger w-100" onclick="clearChat()">CLEAR CHAT
-                                CONTEXT</button>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-outline-info w-50" onclick="summarizeChat()">SUMMARIZE SESSION</button>
+                                <button type="button" class="btn btn-outline-danger w-50" onclick="clearChat()">CLEAR CONTEXT</button>
+                            </div>
                         </div>
 
                         <div class="row g-2 mt-3" id="mainActionBtns">
@@ -385,9 +387,33 @@
         }
 
         function closeViewer() { document.getElementById('reportContent').innerHTML = ''; }
-        function updateProviderHint() {
+        async function updateProviderHint() {
             const k = document.getElementById('provider').value;
-            document.getElementById('model').placeholder = PROVIDERS[k].default_model;
+            const modelSelect = document.getElementById('model');
+            
+            // Clear current options
+            modelSelect.innerHTML = '<option value="">Loading...</option>';
+            
+            try {
+                const res = await fetch(`/api/models/${k}`);
+                const models = await res.json();
+                
+                modelSelect.innerHTML = '';
+                if (models.length === 0) {
+                    modelSelect.innerHTML = '<option value="">No models found</option>';
+                } else {
+                    models.forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m;
+                        opt.innerText = m;
+                        if (m === PROVIDERS[k].default_model) opt.selected = true;
+                        modelSelect.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error("Error fetching models:", e);
+                modelSelect.innerHTML = '<option value="">Error loading models</option>';
+            }
         }
         updateProviderHint();
 
@@ -456,6 +482,17 @@
         }
 
         async function clearChat() { await fetch('/chat/clear', { method: 'POST' }); chatBox.innerHTML = ''; }
+
+        async function summarizeChat() {
+            const res = await fetch('/chat/summarize', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+                    repo: document.getElementById('chatRepo').value, 
+                    provider: document.getElementById('provider').value, 
+                    model: document.getElementById('model').value,
+                    system_prompt: document.getElementById('chatSystemPrompt').value
+                })
+            });
+        }
 
         async function updateStatus() {
             const res = await fetch('/status'), data = await res.json();

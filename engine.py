@@ -85,13 +85,21 @@ def execute_chat_command(prompt, cwd, provider_key, model, state_proxy, system_p
         if state_proxy.get("active_session"):
             session_arg = f"--resume {state_proxy['active_session']}"
         
-        system_arg = ""
+        # Prepend system prompt to the main prompt if provided
+        final_prompt = prompt
         if system_prompt:
-            system_arg = f"--system {shlex.quote(system_prompt)}"
+            final_prompt = f"SYSTEM INSTRUCTIONS:\n{system_prompt}\n\nUSER MESSAGE:\n{prompt}"
             
-        command_str = f"gemini --prompt {prompt_quoted} {session_arg} {system_arg} --yolo"
+        prompt_quoted = shlex.quote(final_prompt)
+        command_str = f"gemini --prompt {prompt_quoted} {session_arg} --yolo"
     else:
         template = preset["template"]
+        # For other providers, we might still want to prepend system prompt if not handled by template
+        final_prompt = prompt
+        if system_prompt:
+            final_prompt = f"{system_prompt}\n\n{prompt}"
+        
+        prompt_quoted = shlex.quote(final_prompt)
         command_str = template.format(
             model=model or preset["default_model"],
             prompt_quoted=prompt_quoted
@@ -131,3 +139,76 @@ def execute_chat_command(prompt, cwd, provider_key, model, state_proxy, system_p
         state_proxy["active_session"] = "latest"
 
     return "".join(full_output)
+
+def fetch_available_models(provider_key):
+    """
+    Fetches available models for a given provider. 
+    Uses CLI commands where possible (e.g. Ollama) or predefined lists for remote providers.
+    """
+    if provider_key == "ollama":
+        try:
+            res = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=5)
+            if res.returncode == 0:
+                # Format: NAME [ID] [SIZE] [MODIFIED]
+                lines = res.stdout.strip().split('\n')[1:]
+                return sorted([line.split()[0] for line in lines if line.strip()])
+        except Exception as e:
+            print(f"Error fetching Ollama models: {e}")
+    
+    elif provider_key == "gemini":
+        return [
+            "gemini-2.0-flash", 
+            "gemini-1.5-flash", 
+            "gemini-1.5-pro", 
+            "gemini-2.0-flash-thinking-exp",
+            "gemini-3-flash-preview",
+            "gemini-2.0-pro-exp-02-05",
+            "gemini-3-pro-preview"
+        ]
+    
+    elif provider_key == "codex":
+        try:
+            import os
+            import json
+            cache_path = os.path.expanduser("~/.codex/models_cache.json")
+            if os.path.exists(cache_path):
+                with open(cache_path, "r") as f:
+                    data = json.load(f)
+                    models = [m["slug"] for m in data.get("models", []) if "slug" in m]
+                    if models:
+                        return sorted(list(set(models)))
+        except Exception as e:
+            print(f"Error fetching Codex models: {e}")
+        return ["gpt-5.4", "gpt-5.4-mini"]
+
+    elif provider_key == "claude":
+        try:
+            res = subprocess.run(["claude", "agents"], capture_output=True, text=True, timeout=5)
+            if res.returncode == 0:
+                # Format: agent-name · model-name
+                lines = res.stdout.strip().split('\n')
+                models = set()
+                for line in lines:
+                    if '·' in line:
+                        parts = line.split('·')
+                        if len(parts) > 1:
+                            m = parts[1].strip()
+                            if m and m != 'inherit':
+                                models.add(m)
+                if models: return sorted(list(models))
+        except: pass
+        return ["sonnet", "haiku", "opus"]
+    
+    elif provider_key == "llm":
+        try:
+            res = subprocess.run(["llm", "models"], capture_output=True, text=True, timeout=5)
+            if res.returncode == 0:
+                lines = res.stdout.strip().split('\n')
+                return sorted([line.split(':')[0].strip() for line in lines if ':' in line])
+        except: pass
+        return ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"]
+
+    # Fallback to the default model defined in config
+    preset = PROVIDERS.get(provider_key, {})
+    default = preset.get("default_model")
+    return [default] if default else []

@@ -7,7 +7,7 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 from config import execution_state, PROVIDERS, DEFAULT_SYSTEM_PROMPT, DEFAULT_TASK_TEMPLATE, DEFAULT_KB_TEMPLATE, CLR_INFO, CLR_ERROR, CLR_SUCCESS, CLR_WARNING, CLR_RESET
 from parser import parse_capabilities
-from engine import execute_llm_command, execute_chat_command
+from engine import execute_llm_command, execute_chat_command, fetch_available_models
 from git_utils import run_git_command
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
@@ -81,9 +81,19 @@ def chat():
         with open(execution_state["chat_file"], "w") as f:
             f.write(f"# Interactive Chat Session: {session_id}\n")
             f.write(f"**Target Repo:** {repo}\n")
-            f.write(f"**Provider:** {provider}\n\n")
+            f.write(f"**Provider:** {provider}\n")
+            if system_prompt:
+                f.write(f"\n<div class='system-prompt-block'><strong>Initial System Prompt</strong>\n{system_prompt}</div>\n\n")
+            f.write(f"\n---\n\n")
+        execution_state["last_system_prompt"] = system_prompt
 
     def chat_bg():
+        # Detect and log System Prompt changes
+        if system_prompt != execution_state.get("last_system_prompt"):
+            with open(execution_state["chat_file"], "a") as f:
+                f.write(f"\n<div class='system-prompt-block'><strong>System Prompt Updated</strong>\n{system_prompt}</div>\n\n")
+            execution_state["last_system_prompt"] = system_prompt
+
         response = execute_chat_command(prompt, repo, provider, model, execution_state, system_prompt=system_prompt)
         
         # Persist to file
@@ -96,6 +106,39 @@ def chat():
         execution_state["is_running"] = False
         
     threading.Thread(target=chat_bg).start()
+    return jsonify({"status": "processing"})
+
+@app.route('/chat/summarize', methods=['POST'])
+def summarize_chat():
+    if execution_state["is_running"]: return jsonify({"error": "Engine busy"}), 400
+    data = request.json
+    repo = data.get('repo') or os.getcwd()
+    provider = data.get('provider')
+    model = data.get('model')
+    system_prompt = data.get('system_prompt')
+    
+    if not execution_state["chat_history"]:
+        return jsonify({"error": "No history to summarize"}), 400
+
+    history_text = "\n".join([f"{m['role'].upper()}: {m['text']}" for m in execution_state["chat_history"]])
+    summary_prompt = f"POR FAVOR, RESUME ESTA CONVERSACIÓN HASTA EL MOMENTO. Destaca los puntos clave, decisiones tomadas e información técnica relevante.\n\nHISTORIAL:\n{history_text}"
+    
+    execution_state["is_running"] = True
+    execution_state["logs"] = f"{CLR_INFO}[SUMMARIZE] Generating session summary...{CLR_RESET}\n"
+    
+    def summary_bg():
+        final_system = f"{system_prompt}\n\nAct as a summarization assistant. Use the persona defined above to summarize the conversation history provided."
+        response = execute_chat_command(summary_prompt, repo, provider, model, execution_state, system_prompt=final_system)
+        
+        if execution_state.get("chat_file"):
+            with open(execution_state["chat_file"], "a") as f:
+                f.write(f"\n<div class='system-prompt-block'><strong>System Prompt used for Summary</strong>\n{system_prompt}</div>\n\n")
+                f.write(f"\n## 📝 Session Summary\n{response}\n\n---\n\n")
+        
+        execution_state["chat_history"].append({"role": "assistant", "text": f"### 📝 SESSION SUMMARY\n{response}"})
+        execution_state["is_running"] = False
+        
+    threading.Thread(target=summary_bg).start()
     return jsonify({"status": "processing"})
 
 @app.route('/chat/clear', methods=['POST'])
@@ -166,6 +209,11 @@ def run_task():
 
 @app.route('/status')
 def get_status(): return jsonify(execution_state)
+
+@app.route('/api/models/<provider>')
+def get_models(provider):
+    models = fetch_available_models(provider)
+    return jsonify(models)
 
 def run_git_command(args, cwd, state_proxy):
     state_proxy["logs"] += f"Executing: git {' '.join(args)}\n"
