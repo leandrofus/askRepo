@@ -265,6 +265,19 @@ def clear_chat():
     execution_state["logs"] = "Chat context cleared. New session file will be created.\n"
     return jsonify({"status": "cleared"})
 
+@app.route('/chat/inject', methods=['POST'])
+def inject_chat():
+    data = request.json
+    role = data.get('role', 'assistant')
+    text = data.get('text', '')
+    if text:
+        execution_state["chat_history"].append({"role": role, "text": text})
+        # If there's an active chat file, log it
+        if execution_state.get("chat_file"):
+            with open(execution_state["chat_file"], "a") as f:
+                f.write(f"### {role.upper()} (INJECTED)\n{text}\n\n---\n\n")
+    return jsonify({"status": "injected"})
+
 @app.route('/run', methods=['POST'])
 def run_task():
     if execution_state["is_running"]: return jsonify({"error": "Already running"}), 400
