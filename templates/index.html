@@ -575,20 +575,17 @@
             if (role === 'assistant') { 
                 // Pre-process text to fix common squashed markdown issues
                 let processedText = text
+                    .replace(/--- #\s*/g, '\n\n### ') // Fix "--- #" junk and turn into header
                     .replace(/([^\n])---/g, '$1\n\n---\n\n') // Force newline before HR
                     .replace(/---([^\n])/g, '\n\n---\n\n$1') // Force newline after HR
                     .replace(/([^\n])(#{1,6}\s+)/g, '$1\n\n$2') // Force newline before headers
                     .replace(/^([A-Z0-9][\)\.]\s+)/gm, '\n$1') // Force newline for list items A) or 1)
-                    .replace(/(Respuesta:|Respuesta\s+esperada:)/gi, '<div class="response-block">$1') // Wrap responses in a div
-                    .replace(/(\n\n|$)/, (match, p1) => { return text.toLowerCase().includes('respuesta') ? '</div>' + match : match; });
+                    .replace(/(Respuesta:|Respuesta\s+esperada:)/gi, '<div class="response-block">$1');
 
-                // If we wrapped a response block, ensure we close the div properly if needed
-                // Simple heuristic: if we opened a div, close it at the next double newline or end
-                if (processedText.includes('response-block') && !processedText.includes('</div>')) {
-                    processedText += '</div>';
-                }
+                // Close response block at the next double newline or start of a new question/separator
+                processedText = processedText.replace(/(<div class="response-block">[\s\S]+?)(?=\n\n|---|$)/g, '$1</div>\n\n');
 
-                d.innerHTML = marked.parse(processedText); 
+                d.innerHTML = marked.parse(processedText.trim()); 
                 d.querySelectorAll('pre code').forEach((el) => hljs.highlightElement(el)); 
             } else { 
                 d.innerText = text; 
